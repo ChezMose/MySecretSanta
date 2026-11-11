@@ -60,6 +60,14 @@ android {
     }
 }
 
+// Chaque test apparaît dans le journal de GitHub Actions, réussi ou non.
+tasks.withType<Test>().configureEach {
+    testLogging {
+        events("passed", "skipped", "failed")
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+}
+
 // Schémas de la base exportés à chaque compilation (récupérables dans les artefacts GitHub Actions).
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
