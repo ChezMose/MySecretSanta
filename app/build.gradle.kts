@@ -62,11 +62,12 @@ android {
 
 // Robolectric (tests de la base) a besoin d'une image d'Android. Elle est téléchargée par Gradle,
 // qui la met en cache entre deux builds GitHub Actions, puis Robolectric tourne hors ligne.
-// Ce nom dépend de la version de Robolectric et du SDK de @Config(sdk = [34]) : en cas de mise à jour
-// de Robolectric, reprendre le nom affiché dans l'erreur « Failed to fetch maven artifact ».
+// Ces noms dépendent de la version de Robolectric : en cas de mise à jour, reprendre ceux affichés
+// dans l'erreur « Path is not a file: …/robolectric-jars/android-all-instrumented-….jar ».
 val robolectricAndroidAll: Configuration by configurations.creating { isTransitive = false }
 dependencies {
     robolectricAndroidAll("org.robolectric:android-all-instrumented:14-robolectric-10818077-i7")
+    robolectricAndroidAll("org.robolectric:android-all-instrumented:15-robolectric-12650502-i7")
 }
 val robolectricJarsDir = layout.buildDirectory.dir("robolectric-jars")
 val copyRobolectricJars by tasks.registering(Copy::class) {

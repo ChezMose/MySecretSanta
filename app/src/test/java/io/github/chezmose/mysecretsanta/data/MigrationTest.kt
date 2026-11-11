@@ -14,14 +14,12 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.annotation.Config
 
 /**
  * Vérifie que la mise à jour de l'app conserve les données de l'utilisateur.
  * Chaque test crée une base dans l'ancien format, avec des données, puis l'ouvre avec le code actuel.
  */
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
 class MigrationTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
