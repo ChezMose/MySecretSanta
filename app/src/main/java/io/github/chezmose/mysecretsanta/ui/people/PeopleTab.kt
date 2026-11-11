@@ -72,7 +72,7 @@ fun PeopleTab(vm: PeopleViewModel, onOpenPerson: (Long) -> Unit) {
             items(list, key = { it.id }) { person ->
                 ListItem(
                     headlineContent = { Text(person.name) },
-                    supportingContent = { Text(PhoneNumbers.format(person.phoneE164)) },
+                    supportingContent = { Text(PhoneNumbers.label(person.phoneE164)) },
                     leadingContent = { Icon(Icons.Filled.Person, contentDescription = null) },
                     modifier = Modifier.clickable { onOpenPerson(person.id) },
                 )

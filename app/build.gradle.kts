@@ -54,6 +54,15 @@ android {
     buildFeatures {
         compose = true
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+// Schémas de la base exportés à chaque compilation (récupérables dans les artefacts GitHub Actions).
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -74,4 +83,6 @@ dependencies {
     implementation(libs.zxing.core)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
 }

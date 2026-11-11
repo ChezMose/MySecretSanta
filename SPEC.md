@@ -45,7 +45,7 @@ Seul l'organisateur installe l'application. Les participants reçoivent un simpl
 - Le bouton « Nouvelle personne » propose deux choix : **Choisir dans les contacts** ou **Saisir à la main**.
   - *Choisir dans les contacts* ouvre directement le sélecteur de contacts du système, puis la fiche pré-remplie (nom et numéro) : il ne reste qu'à cocher les groupes et enregistrer. Annuler le sélecteur annule la création. Ce sélecteur ne demande pas la permission `READ_CONTACTS`.
   - *Saisir à la main* ouvre la fiche vide : nom affiché (obligatoire), numéro de mobile (obligatoire, sauf personne sans téléphone, §5.9).
-- La fiche garde un bouton « Choisir dans les contacts » pour remplacer le nom et le numéro saisis.
+- Le choix entre contacts et saisie se fait avant d'ouvrir la fiche : la fiche elle-même n'a pas de bouton « Choisir dans les contacts ».
 - Modifier et supprimer une personne. Supprimer une personne la retire de ses groupes et de leurs exclusions. Les tirages passés gardent son nom.
 - Validation du numéro : format français (`06…`, `07…`) ou international (`+33…`), normalisé au format international avant l'enregistrement.
 - Refus des doublons : deux personnes ne peuvent pas avoir le même numéro.
@@ -140,8 +140,9 @@ Certains participants n'ont pas de téléphone, par exemple un enfant. Ils parti
 
 **Fiche personne :**
 
-- Une case à cocher « Pas de téléphone » rend le numéro facultatif, et masque le champ.
+- Une case à cocher « Pas de téléphone », sous le nom, masque le champ du numéro et rappelle que la personne découvrira son tirage sur ce téléphone.
 - Dans les listes, une personne sans téléphone affiche « Pas de téléphone » à la place du numéro.
+- Plusieurs personnes peuvent être sans téléphone : la règle « un numéro unique » ne s'applique qu'aux numéros renseignés.
 
 **Tirage :**
 
@@ -151,7 +152,7 @@ Certains participants n'ont pas de téléphone, par exemple un enfant. Ils parti
 - Sans annulation, l'écran affiche ensuite : « XX, tu offres un cadeau à **YY** », avec un bouton pour masquer le résultat et revenir à l'écran Tirage.
 - Le bouton reste disponible, pour revoir le résultat si XX l'a oublié. L'état du participant passe à *Vu* au premier affichage, comme *Envoyé* pour un SMS.
 
-Prévu après le tirage au sort (§10).
+La fiche personne est faite (étape 2). Le bouton « Voir pour XX » viendra avec l'écran Tirage (§10, étape 7).
 
 ## 6. Écrans
 
@@ -162,7 +163,7 @@ L'écran d'accueil a trois onglets : **Tirages**, **Groupes**, **Personnes**. Sa
 3. **Personnes** : carnet, avec recherche par nom ou numéro. Bouton « Nouvelle personne », qui propose *Choisir dans les contacts* ou *Saisir à la main*.
 4. **Groupe** : membres, ajout depuis le carnet, depuis les contacts ou par saisie, exclusions, historique des tirages, bouton « Nouveau tirage ».
 5. **Exclusion** (création / modification) : type, personnes concernées, libellé.
-6. **Personne** (création / modification) : bouton « Choisir dans les contacts » qui remplit le nom et le numéro, nom, case « Pas de téléphone », numéro, groupes dont elle est membre (cases à cocher).
+6. **Personne** (création / modification) : nom, case « Pas de téléphone », numéro, groupes dont elle est membre (cases à cocher). En création depuis les contacts, le sélecteur s'ouvre d'abord et pré-remplit le nom et le numéro.
 7. **Nouveau tirage** : groupe, participants à cocher, nom, date, budget, message avec aperçu et nombre de segments.
 8. **Tirage** : état de chaque participant, bouton « Tirer au sort », puis « Envoyer les SMS », renvoi individuel, bouton « Voir pour XX » par participant sans téléphone (§5.9), menu « Révéler le tirage ».
 9. **Réglages** : modèle de message par défaut, SIM d'envoi par défaut.
@@ -220,9 +221,9 @@ Expo (React Native) a été écarté : `expo-sms` ne fait qu'ouvrir l'app SMS. L
 ## 10. Étapes de réalisation
 
 1. ✅ Projet Android vide, compilé et signé par GitHub Actions, qui s'installe sur le téléphone. Écran Partager et README d'installation.
-2. ✅ Personnes et groupes (stockage + écrans 2, 3, 4, 6).
+2. ✅ Personnes et groupes (stockage + écrans 2, 3, 4, 6), dont les personnes sans téléphone.
 3. Algorithme de tirage et tests unitaires.
 4. Exclusions (écran 5).
 5. Création d'un tirage et modèle de message (écrans 7, 9).
 6. Envoi des SMS, suivi des états, historique (écrans 1, 8).
-7. Participants sans téléphone (§5.9) : case sur la fiche personne (migration de la base), bouton « Voir pour XX » avec compte à rebours.
+7. Participants sans téléphone (§5.9) : bouton « Voir pour XX » avec compte à rebours sur l'écran Tirage.

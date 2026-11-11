@@ -49,8 +49,9 @@ class PeopleViewModel(personDao: PersonDao) : ViewModel() {
 private fun Person.matches(query: String): Boolean {
     val key = query.searchKey()
     if (key.isEmpty() || name.searchKey().contains(key)) return true
+    val phone = phoneE164 ?: return false
     val digits = query.filter { it in '0'..'9' }
     if (digits.length < 2) return false
-    return phoneE164.contains(digits) ||
-        PhoneNumbers.format(phoneE164).filter { it in '0'..'9' }.contains(digits)
+    return phone.contains(digits) ||
+        PhoneNumbers.format(phone).filter { it in '0'..'9' }.contains(digits)
 }

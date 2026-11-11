@@ -5,7 +5,10 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/** Une entrée du carnet. Le numéro, au format international, est unique. */
+/**
+ * Une entrée du carnet. Le numéro, au format international, est unique.
+ * `phoneE164` est `null` pour une personne sans téléphone (SPEC.md §5.9).
+ */
 @Entity(
     tableName = "person",
     indices = [Index(value = ["phoneE164"], unique = true)],
@@ -13,7 +16,7 @@ import androidx.room.PrimaryKey
 data class Person(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    val phoneE164: String,
+    val phoneE164: String?,
 )
 
 /** Un groupe de personnes réutilisable d'un tirage à l'autre. */

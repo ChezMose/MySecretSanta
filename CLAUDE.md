@@ -9,7 +9,8 @@ App Android perso : liste d'invités, tirage au sort du Secret Santa, envoi dire
 ## Données
 
 - Base Room locale ([data/AppDatabase.kt](app/src/main/java/io/github/chezmose/mysecretsanta/data/AppDatabase.kt)).
-- Toute modification du schéma impose d'augmenter la version de la base et d'écrire une `Migration`. Jamais de `fallbackToDestructiveMigration` : une mise à jour de l'app ne doit jamais effacer les données de l'utilisateur.
+- Toute modification du schéma impose d'augmenter la version de la base, d'écrire une `Migration` (ajoutée à `AppDatabase.MIGRATIONS`) et de la couvrir dans [MigrationTest.kt](app/src/test/java/io/github/chezmose/mysecretsanta/data/MigrationTest.kt) (Robolectric, lancé par la CI). Jamais de `fallbackToDestructiveMigration` : une mise à jour de l'app ne doit jamais effacer les données de l'utilisateur.
+- Les schémas exportés par Room (`app/schemas/`) sont publiés comme artefact `room-schemas` de chaque build GitHub Actions. Les récupérer et les versionner à chaque nouvelle version de la base (`gh run download <id> -n room-schemas -D app/schemas`) : ils servent de référence pour écrire la migration suivante.
 - Tri alphabétique et recherche en Kotlin (`sortedByName`, `searchKey`), pas en SQL : SQLite ne sait pas trier les accents à la française.
 
 ## Compilation

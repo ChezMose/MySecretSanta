@@ -44,13 +44,13 @@ class PersonViewModel(
     /** La création a été lancée depuis les contacts : annuler le sélecteur annule la création. */
     val startedFromContacts = isNew && fromContacts
 
-    fun onContactPickerLaunched() {
-        pendingContactPicker = false
-    }
-
     var name by mutableStateOf("")
         private set
     var phone by mutableStateOf("")
+        private set
+
+    /** Personne sans téléphone (un enfant, par exemple) : le numéro n'est pas demandé. */
+    var noPhone by mutableStateOf(false)
         private set
     var nameError by mutableStateOf<String?>(null)
         private set
@@ -71,13 +71,18 @@ class PersonViewModel(
             viewModelScope.launch {
                 db.personDao().get(personId)?.let {
                     name = it.name
-                    phone = PhoneNumbers.format(it.phoneE164)
+                    phone = it.phoneE164?.let(PhoneNumbers::format).orEmpty()
+                    noPhone = it.phoneE164 == null
                 }
                 selectedGroupIds = db.groupDao().groupIdsOf(personId).toSet()
             }
         } else if (presetGroupId != null) {
             selectedGroupIds = setOf(presetGroupId)
         }
+    }
+
+    fun onContactPickerLaunched() {
+        pendingContactPicker = false
     }
 
     fun onNameChange(value: String) {
@@ -90,6 +95,11 @@ class PersonViewModel(
         phoneError = null
     }
 
+    fun onNoPhoneChange(value: Boolean) {
+        noPhone = value
+        phoneError = null
+    }
+
     fun toggleGroup(groupId: Long) {
         selectedGroupIds =
             if (groupId in selectedGroupIds) selectedGroupIds - groupId else selectedGroupIds + groupId
@@ -98,6 +108,7 @@ class PersonViewModel(
     fun fillFromContact(contactName: String?, contactPhone: String?) {
         if (!contactName.isNullOrBlank()) onNameChange(contactName.trim())
         if (!contactPhone.isNullOrBlank()) {
+            onNoPhoneChange(false)
             onPhoneChange(
                 when (val result = PhoneNumbers.normalize(contactPhone)) {
                     is PhoneNumbers.Result.Valid -> PhoneNumbers.format(result.e164)
@@ -111,24 +122,33 @@ class PersonViewModel(
         if (saving) return
         val trimmedName = name.trim()
         nameError = if (trimmedName.isEmpty()) "Le nom est obligatoire." else null
-        val normalized = PhoneNumbers.normalize(phone)
-        phoneError = (normalized as? PhoneNumbers.Result.Invalid)?.message
-        if (normalized !is PhoneNumbers.Result.Valid) return
+
+        val phoneE164: String?
+        if (noPhone) {
+            phoneE164 = null
+        } else {
+            val normalized = PhoneNumbers.normalize(phone)
+            phoneError = (normalized as? PhoneNumbers.Result.Invalid)?.message
+            if (normalized !is PhoneNumbers.Result.Valid) return
+            phoneE164 = normalized.e164
+        }
         if (nameError != null) return
 
         saving = true
         viewModelScope.launch {
-            val owner = db.personDao().findByPhone(normalized.e164)
-            if (owner != null && owner.id != personId) {
-                phoneError = "Ce numéro est déjà celui de ${owner.name}."
-                saving = false
-                return@launch
+            if (phoneE164 != null) {
+                val owner = db.personDao().findByPhone(phoneE164)
+                if (owner != null && owner.id != personId) {
+                    phoneError = "Ce numéro est déjà celui de ${owner.name}."
+                    saving = false
+                    return@launch
+                }
             }
             db.withTransaction {
                 val id = if (personId == null) {
-                    db.personDao().insert(Person(name = trimmedName, phoneE164 = normalized.e164))
+                    db.personDao().insert(Person(name = trimmedName, phoneE164 = phoneE164))
                 } else {
-                    db.personDao().update(Person(id = personId, name = trimmedName, phoneE164 = normalized.e164))
+                    db.personDao().update(Person(id = personId, name = trimmedName, phoneE164 = phoneE164))
                     personId
                 }
                 db.groupDao().setMemberships(id, selectedGroupIds)

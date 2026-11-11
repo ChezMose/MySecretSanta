@@ -24,7 +24,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -32,7 +31,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -70,7 +68,8 @@ fun PersonScreen(
     val groups by vm.groups.collectAsStateWithLifecycle()
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
 
-    // Sélecteur de contacts du système : pas besoin de la permission READ_CONTACTS.
+    // Création « depuis les contacts » : le sélecteur du système s'ouvre dès l'arrivée sur l'écran.
+    // Il ne demande pas la permission READ_CONTACTS.
     val pickContact = rememberLauncherForActivityResult(PickPhoneContact()) { uri ->
         if (uri != null) {
             scope.launch {
@@ -78,22 +77,18 @@ fun PersonScreen(
                 if (contact != null) vm.fillFromContact(contact.first, contact.second)
             }
         } else if (vm.startedFromContacts && vm.name.isEmpty() && vm.phone.isEmpty()) {
-            // Création lancée depuis les contacts, puis sélecteur annulé : rien à créer.
+            // Sélecteur annulé : rien à créer.
             onBack()
         }
     }
-    val launchContactPicker = {
-        try {
-            pickContact.launch(Unit)
-        } catch (_: ActivityNotFoundException) {
-            // Pas d'app Contacts : la saisie manuelle reste possible.
-        }
-    }
-
     LaunchedEffect(Unit) {
         if (vm.pendingContactPicker) {
             vm.onContactPickerLaunched()
-            launchContactPicker()
+            try {
+                pickContact.launch(Unit)
+            } catch (_: ActivityNotFoundException) {
+                // Pas d'app Contacts : la saisie manuelle reste possible.
+            }
         }
     }
 
@@ -125,15 +120,6 @@ fun PersonScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedButton(
-                onClick = launchContactPicker,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Icon(Icons.Filled.AccountBox, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Choisir dans les contacts")
-            }
-
             OutlinedTextField(
                 value = vm.name,
                 onValueChange = vm::onNameChange,
@@ -143,25 +129,40 @@ fun PersonScreen(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words,
-                    imeAction = ImeAction.Next,
+                    imeAction = if (vm.noPhone) ImeAction.Done else ImeAction.Next,
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            OutlinedTextField(
-                value = vm.phone,
-                onValueChange = vm::onPhoneChange,
-                label = { Text("Numéro de mobile") },
-                isError = vm.phoneError != null,
-                supportingText = { Text(vm.phoneError ?: "06 12 34 56 78, ou +32 … pour l'étranger") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = KeyboardType.Phone,
-                    imeAction = ImeAction.Done,
-                ),
-                modifier = Modifier.fillMaxWidth(),
+            CheckboxRow(
+                label = "Pas de téléphone",
+                checked = vm.noPhone,
+                onCheckedChange = vm::onNoPhoneChange,
             )
 
+            if (!vm.noPhone) {
+                OutlinedTextField(
+                    value = vm.phone,
+                    onValueChange = vm::onPhoneChange,
+                    label = { Text("Numéro de mobile") },
+                    isError = vm.phoneError != null,
+                    supportingText = { Text(vm.phoneError ?: "06 12 34 56 78, ou +32 … pour l'étranger") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Phone,
+                        imeAction = ImeAction.Done,
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                Text(
+                    "Cette personne ne recevra pas de SMS : elle découvrira son tirage sur ce téléphone.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
             Text("Groupes", style = MaterialTheme.typography.titleMedium)
             if (groups.isEmpty()) {
                 Text(
@@ -170,21 +171,11 @@ fun PersonScreen(
                 )
             }
             groups.forEach { group ->
-                val checked = group.id in vm.selectedGroupIds
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .toggleable(
-                            value = checked,
-                            role = Role.Checkbox,
-                            onValueChange = { vm.toggleGroup(group.id) },
-                        ),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(checked = checked, onCheckedChange = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(group.name)
-                }
+                CheckboxRow(
+                    label = group.name,
+                    checked = group.id in vm.selectedGroupIds,
+                    onCheckedChange = { vm.toggleGroup(group.id) },
+                )
             }
 
             Spacer(Modifier.height(8.dp))
@@ -208,6 +199,22 @@ fun PersonScreen(
             },
             onDismiss = { confirmDelete = false },
         )
+    }
+}
+
+/** Case à cocher dont toute la ligne est cliquable. */
+@Composable
+private fun CheckboxRow(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(value = checked, role = Role.Checkbox, onValueChange = onCheckedChange)
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(checked = checked, onCheckedChange = null)
+        Spacer(Modifier.width(8.dp))
+        Text(label)
     }
 }
 

@@ -143,7 +143,7 @@ fun GroupScreen(
             items(members, key = { it.id }) { person ->
                 ListItem(
                     headlineContent = { Text(person.name) },
-                    supportingContent = { Text(PhoneNumbers.format(person.phoneE164)) },
+                    supportingContent = { Text(PhoneNumbers.label(person.phoneE164)) },
                     leadingContent = { Icon(Icons.Filled.Person, contentDescription = null) },
                     trailingContent = {
                         IconButton(onClick = { vm.removeMember(person.id) }) {
@@ -261,7 +261,7 @@ private fun AddMembersDialog(
                         Column {
                             Text(person.name)
                             Text(
-                                PhoneNumbers.format(person.phoneE164),
+                                PhoneNumbers.label(person.phoneE164),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

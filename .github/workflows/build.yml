@@ -54,6 +54,11 @@ jobs:
           name: MySecretSanta-${{ github.run_number }}
           path: MySecretSanta.apk
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: room-schemas
+          path: app/schemas/
+
       - name: Publier dans la release « dev »
         env:
           GH_TOKEN: ${{ github.token }}

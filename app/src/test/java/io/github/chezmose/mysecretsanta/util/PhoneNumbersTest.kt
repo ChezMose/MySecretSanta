@@ -63,5 +63,7 @@ class PhoneNumbersTest {
     fun `affichage`() {
         assertEquals("06 12 34 56 78", PhoneNumbers.format("+33612345678"))
         assertEquals("+32470123456", PhoneNumbers.format("+32470123456"))
+        assertEquals("06 12 34 56 78", PhoneNumbers.label("+33612345678"))
+        assertEquals("Pas de téléphone", PhoneNumbers.label(null))
     }
 }

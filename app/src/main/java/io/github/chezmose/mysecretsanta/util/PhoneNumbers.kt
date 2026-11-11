@@ -58,6 +58,9 @@ object PhoneNumbers {
             e164
         }
 
+    /** Libellé à afficher dans les listes, y compris pour une personne sans téléphone. */
+    fun label(e164: String?): String = e164?.let(::format) ?: "Pas de téléphone"
+
     // Espaces, ponctuation de saisie et caractères invisibles ajoutés par certaines apps Contacts.
     private fun Char.isIgnorableSeparator(): Boolean =
         isWhitespace() ||
