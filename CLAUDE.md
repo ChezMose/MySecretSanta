@@ -6,11 +6,17 @@ App Android perso : liste d'invités, tirage au sort du Secret Santa, envoi dire
 - Stack : Kotlin, Jetpack Compose, Material 3. Interface et messages en français.
 - Package : `io.github.chezmose.mysecretsanta`.
 
+## Données
+
+- Base Room locale ([data/AppDatabase.kt](app/src/main/java/io/github/chezmose/mysecretsanta/data/AppDatabase.kt)).
+- Toute modification du schéma impose d'augmenter la version de la base et d'écrire une `Migration`. Jamais de `fallbackToDestructiveMigration` : une mise à jour de l'app ne doit jamais effacer les données de l'utilisateur.
+- Tri alphabétique et recherche en Kotlin (`sortedByName`, `searchKey`), pas en SQL : SQLite ne sait pas trier les accents à la française.
+
 ## Compilation
 
 Aucun outil Android ni Java sur le poste : **toute compilation passe par GitHub Actions** ([.github/workflows/build.yml](.github/workflows/build.yml)).
 
-- Chaque push sur `main` compile l'APK release signé et le publie dans la release `dev` :
+- Chaque push sur `main` lance les tests unitaires (`app/src/test`), puis compile l'APK release signé et le publie dans la release `dev` :
   `https://github.com/ChezMose/MySecretSanta/releases/download/dev/MySecretSanta.apk`
 - Vérifier un build : `gh run list --limit 3`, puis `gh run view <id> --log-failed` en cas d'échec.
 - Gradle est fourni par `gradle/actions/setup-gradle` (version fixée dans le workflow), sans wrapper dans le dépôt.

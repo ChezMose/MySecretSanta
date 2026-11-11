@@ -4,6 +4,7 @@
     <!-- Pas de permission INTERNET : l'app fonctionne hors ligne (voir SPEC.md §2). -->
 
     <application
+        android:name=".SantaApp"
         android:allowBackup="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"

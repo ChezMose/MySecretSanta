@@ -43,8 +43,8 @@ jobs:
           echo "SIGNING_STORE_FILE=$RUNNER_TEMP/release.p12" >> "$GITHUB_ENV"
           echo "SIGNING_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
 
-      - name: Compiler l'APK
-        run: gradle assembleRelease --no-daemon --stacktrace
+      - name: Tester et compiler l'APK
+        run: gradle testReleaseUnitTest assembleRelease --no-daemon --stacktrace
 
       - name: Renommer l'APK
         run: cp app/build/outputs/apk/release/app-release.apk MySecretSanta.apk

@@ -138,10 +138,10 @@ L'écran d'accueil a trois onglets : **Tirages**, **Groupes**, **Personnes**. Sa
 
 1. **Tirages** : liste des tirages, du plus récent au plus ancien, avec groupe, date et état (*brouillon*, *tiré*, *envoyé*, *révélé*). Bouton « Nouveau tirage ».
 2. **Groupes** : liste des groupes avec leur nombre de membres. Bouton « + ».
-3. **Personnes** : carnet, avec recherche. Bouton « + » et « Choisir dans les contacts ».
+3. **Personnes** : carnet, avec recherche par nom ou numéro. Bouton « Nouvelle personne ».
 4. **Groupe** : membres, exclusions, historique des tirages, bouton « Nouveau tirage ».
 5. **Exclusion** (création / modification) : type, personnes concernées, libellé.
-6. **Personne** (création / modification) : nom, numéro, groupes dont elle est membre.
+6. **Personne** (création / modification) : bouton « Choisir dans les contacts » qui remplit le nom et le numéro, nom, numéro, groupes dont elle est membre (cases à cocher).
 7. **Nouveau tirage** : groupe, participants à cocher, nom, date, budget, message avec aperçu et nombre de segments.
 8. **Tirage** : état de chaque participant, bouton « Tirer au sort », puis « Envoyer les SMS », renvoi individuel, menu « Révéler le tirage ».
 9. **Réglages** : modèle de message par défaut, SIM d'envoi par défaut.
