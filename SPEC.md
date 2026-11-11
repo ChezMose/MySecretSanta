@@ -93,7 +93,15 @@ Les exclusions appartiennent à un groupe et s'appliquent à chacun de ses tirag
 
 **Figer le tirage :** au moment du tirage, l'app fige la liste des participants, leurs noms et numéros. Modifier ensuite le groupe ou une personne ne change pas un tirage déjà fait. Refaire un tirage déjà envoyé demande une confirmation.
 
-**Algorithme proposé :** tirer une permutation au hasard et la rejeter tant qu'elle ne respecte pas les règles. Pour des groupes de taille réaliste (moins de 50 personnes), une solution arrive en quelques essais. Au-delà d'un plafond d'essais, une recherche exhaustive par backtracking distingue « pas de chance » de « impossible ».
+**Algorithme** ([SecretSanta.kt](app/src/main/java/io/github/chezmose/mysecretsanta/draw/SecretSanta.kt)) :
+
+1. Un couplage parfait (algorithme de Kuhn) vérifie qu'au moins une répartition respecte les exclusions. Sinon : *impossible*, sans chercher plus loin.
+2. Échantillonnage par rejet : mélanger les participants au hasard et recommencer tant que le résultat viole une règle. Chaque répartition valide a exactement la même probabilité de sortir. Pour des groupes réalistes, une solution arrive en quelques essais.
+3. Au-delà de 200 000 essais (exclusions très serrées), une recherche exhaustive au hasard trouve une répartition valide, ou prouve qu'il n'en existe qu'avec un échange réciproque. Cette solution de secours est aléatoire mais pas parfaitement équiprobable.
+
+Les exclusions sont transmises à l'algorithme sous forme de paires interdites (donneur, receveur) : un couple donne deux paires, un foyer toutes les paires entre ses membres.
+
+Les tests ([SecretSantaTest.kt](app/src/test/java/io/github/chezmose/mysecretsanta/draw/SecretSantaTest.kt)) comparent le verdict de l'algorithme à l'énumération de toutes les répartitions possibles jusqu'à 8 participants, vérifient les règles sur des milliers de tirages jusqu'à 50 participants, et mesurent l'équiprobabilité.
 
 ### 5.5 Secret du tirage
 
