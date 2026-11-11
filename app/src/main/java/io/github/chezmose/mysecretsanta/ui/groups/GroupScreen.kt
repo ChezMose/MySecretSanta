@@ -52,13 +52,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.chezmose.mysecretsanta.data.Person
+import io.github.chezmose.mysecretsanta.draw.Feasibility
+import io.github.chezmose.mysecretsanta.draw.SecretSanta
+import io.github.chezmose.mysecretsanta.ui.common.AlertCard
 import io.github.chezmose.mysecretsanta.ui.common.ConfirmDeleteDialog
+import io.github.chezmose.mysecretsanta.ui.exclusions.describe
+import io.github.chezmose.mysecretsanta.ui.exclusions.icon
+import io.github.chezmose.mysecretsanta.ui.exclusions.label
 import io.github.chezmose.mysecretsanta.ui.common.NameDialog
 import io.github.chezmose.mysecretsanta.util.PhoneNumbers
 import io.github.chezmose.mysecretsanta.util.membersLabel
 
-/** Nombre minimal de participants pour un tirage (SPEC.md §5.4). */
-private const val MIN_DRAW_SIZE = 3
+private const val MIN_DRAW_SIZE = SecretSanta.MIN_PARTICIPANTS
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,11 +72,16 @@ fun GroupScreen(
     onOpenPerson: (Long) -> Unit,
     onNewPerson: (groupId: Long, fromContacts: Boolean) -> Unit,
     onOpenGroup: (Long) -> Unit,
+    onAddExclusion: (groupId: Long) -> Unit,
+    onOpenExclusion: (groupId: Long, ruleId: Long) -> Unit,
     vm: GroupViewModel = viewModel(factory = GroupViewModel.Factory),
 ) {
     val group by vm.group.collectAsStateWithLifecycle()
     val members by vm.members.collectAsStateWithLifecycle()
     val candidates by vm.candidates.collectAsStateWithLifecycle()
+    val exclusions by vm.exclusions.collectAsStateWithLifecycle()
+    val feasibility by vm.feasibility.collectAsStateWithLifecycle()
+    val namesById = members.associate { it.id to it.name }
     var menuOpen by remember { mutableStateOf(false) }
     var showRename by rememberSaveable { mutableStateOf(false) }
     var showDelete by rememberSaveable { mutableStateOf(false) }
@@ -119,12 +129,32 @@ fun GroupScreen(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
             contentPadding = PaddingValues(vertical = 8.dp),
         ) {
+            when (val status = feasibility) {
+                is Feasibility.Impossible -> item {
+                    AlertCard(
+                        title = "Tirage impossible",
+                        message = (
+                            status.reasons +
+                                "Les exclusions ne laissent aucune répartition possible : retire ou modifie une exclusion."
+                            ).joinToString("\n"),
+                        isError = true,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+                Feasibility.OnlyWithReciprocal -> item {
+                    AlertCard(
+                        title = "Tirage possible seulement avec un échange réciproque",
+                        message = "Avec ces exclusions, au moins deux personnes devront s'offrir un cadeau " +
+                            "l'une à l'autre. Tu pourras l'accepter au moment du tirage, " +
+                            "ou modifier les exclusions.",
+                        isError = false,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
+                }
+                else -> Unit
+            }
             item {
-                Text(
-                    "Membres (${members.size})",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+                SectionHeader("Membres (${members.size})")
             }
             if (members.size < MIN_DRAW_SIZE) {
                 item {
@@ -186,6 +216,44 @@ fun GroupScreen(
                     }
                 }
             }
+
+            item {
+                SectionHeader("Exclusions (${exclusions.size})")
+            }
+            if (exclusions.isEmpty()) {
+                item {
+                    Text(
+                        "Aucune exclusion. Ajoute par exemple les couples, " +
+                            "qui ne doivent pas se tirer l'un l'autre.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+            }
+            items(exclusions, key = { "exclusion-${it.rule.id}" }) { exclusion ->
+                val type = exclusion.rule.type
+                ListItem(
+                    headlineContent = { Text(exclusion.describe { namesById[it] ?: "?" }) },
+                    supportingContent = {
+                        Text(listOfNotNull(type.label, exclusion.rule.label).joinToString(" · "))
+                    },
+                    leadingContent = { Icon(type.icon, contentDescription = null) },
+                    modifier = Modifier.clickable { onOpenExclusion(vm.groupId, exclusion.rule.id) },
+                )
+                HorizontalDivider()
+            }
+            item {
+                OutlinedButton(
+                    onClick = { onAddExclusion(vm.groupId) },
+                    enabled = members.size >= 2,
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Ajouter une exclusion")
+                }
+            }
         }
     }
 
@@ -227,6 +295,15 @@ fun GroupScreen(
             onDismiss = { showAdd = false },
         )
     }
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+    )
 }
 
 @Composable

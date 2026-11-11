@@ -7,6 +7,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import io.github.chezmose.mysecretsanta.ui.exclusions.ExclusionScreen
 import io.github.chezmose.mysecretsanta.ui.groups.GroupScreen
 import io.github.chezmose.mysecretsanta.ui.people.PersonScreen
 import io.github.chezmose.mysecretsanta.ui.share.ShareScreen
@@ -17,7 +18,11 @@ private object Routes {
     const val GROUP = "group/{groupId}"
     const val PERSON = "person?personId={personId}&groupId={groupId}&fromContacts={fromContacts}"
 
+    const val EXCLUSION = "exclusion/{groupId}?ruleId={ruleId}"
+
     fun group(groupId: Long) = "group/$groupId"
+    fun newExclusion(groupId: Long) = "exclusion/$groupId"
+    fun editExclusion(groupId: Long, ruleId: Long) = "exclusion/$groupId?ruleId=$ruleId"
     fun editPerson(personId: Long) = "person?personId=$personId"
 
     /** @param fromContacts ouvre directement le sélecteur de contacts. */
@@ -53,7 +58,18 @@ fun AppNavHost(version: String) {
                     nav.navigate(Routes.newPerson(groupId, fromContacts))
                 },
                 onOpenGroup = { nav.navigate(Routes.group(it)) },
+                onAddExclusion = { groupId -> nav.navigate(Routes.newExclusion(groupId)) },
+                onOpenExclusion = { groupId, ruleId -> nav.navigate(Routes.editExclusion(groupId, ruleId)) },
             )
+        }
+        composable(
+            Routes.EXCLUSION,
+            arguments = listOf(
+                navArgument("groupId") { type = NavType.LongType },
+                navArgument("ruleId") { type = NavType.LongType; defaultValue = -1L },
+            ),
+        ) {
+            ExclusionScreen(onBack = { nav.back() })
         }
         composable(
             Routes.PERSON,

@@ -67,8 +67,12 @@ Les exclusions appartiennent à un groupe et s'appliquent à chacun de ses tirag
 | **Sens unique** | A n'offre pas à B. B peut offrir à A. | Exclusion sur mesure, au cas par cas. |
 | **Foyer** | Aucun membre du foyer n'offre à un autre membre du foyer. | Parents et enfants vivant ensemble. |
 
-- Créer, modifier et supprimer une exclusion. Un libellé facultatif rappelle sa raison.
-- L'app signale tout de suite si les exclusions rendent un tirage impossible, par exemple quand une personne est exclue de toutes les autres.
+- Créer, modifier et supprimer une exclusion, depuis la fiche du groupe. Un libellé facultatif rappelle sa raison (« Mariés »).
+- Une exclusion ne concerne que des membres du groupe. Si une personne quitte le groupe ou est supprimée, elle est retirée de ses exclusions, et une exclusion qui ne concerne plus au moins 2 personnes disparaît.
+- Dupliquer un groupe copie aussi ses exclusions.
+- La fiche du groupe signale tout de suite, avec l'algorithme de tirage :
+  - un tirage **impossible**, en nommant les personnes bloquées quand c'est évident (« Alice ne peut offrir à personne. ») ;
+  - un tirage possible **seulement avec un échange réciproque**, que l'organisateur pourra accepter au moment du tirage.
 
 ### 5.4 Tirage au sort
 

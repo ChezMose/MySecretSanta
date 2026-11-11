@@ -7,15 +7,20 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.chezmose.mysecretsanta.SantaApp
+import io.github.chezmose.mysecretsanta.data.ExclusionWithMembers
 import io.github.chezmose.mysecretsanta.data.GroupDao
 import io.github.chezmose.mysecretsanta.data.GroupMember
 import io.github.chezmose.mysecretsanta.data.Person
 import io.github.chezmose.mysecretsanta.data.PersonDao
 import io.github.chezmose.mysecretsanta.data.SantaGroup
+import io.github.chezmose.mysecretsanta.draw.Feasibility
+import io.github.chezmose.mysecretsanta.draw.assessFeasibility
 import io.github.chezmose.mysecretsanta.util.sortedByName
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -34,6 +39,16 @@ class GroupViewModel(
         groupDao.observeMembers(groupId)
             .map { list -> list.sortedByName { it.name } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val exclusions: StateFlow<List<ExclusionWithMembers>> =
+        groupDao.observeExclusions(groupId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** `null` pendant le calcul. */
+    val feasibility: StateFlow<Feasibility?> =
+        combine(members, exclusions) { m, e -> assessFeasibility(m, e) }
+            .flowOn(Dispatchers.Default)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     /** Personnes du carnet qui ne sont pas encore dans le groupe. */
     val candidates: StateFlow<List<Person>> =

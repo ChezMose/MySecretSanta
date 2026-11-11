@@ -15,8 +15,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * les données de l'utilisateur ne doivent jamais être perdues lors d'une mise à jour de l'app.
  */
 @Database(
-    entities = [Person::class, SantaGroup::class, GroupMember::class],
-    version = 2,
+    entities = [
+        Person::class,
+        SantaGroup::class,
+        GroupMember::class,
+        ExclusionRule::class,
+        ExclusionMember::class,
+    ],
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -50,7 +56,39 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS = arrayOf(MIGRATION_1_2)
+        /** v2 → v3 : exclusions des groupes. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `exclusion_rule` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`groupId` INTEGER NOT NULL, " +
+                        "`type` TEXT NOT NULL, " +
+                        "`label` TEXT, " +
+                        "FOREIGN KEY(`groupId`) REFERENCES `santa_group`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_exclusion_rule_groupId` ON `exclusion_rule` (`groupId`)",
+                )
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `exclusion_member` (" +
+                        "`ruleId` INTEGER NOT NULL, " +
+                        "`personId` INTEGER NOT NULL, " +
+                        "`role` TEXT NOT NULL, " +
+                        "PRIMARY KEY(`ruleId`, `personId`), " +
+                        "FOREIGN KEY(`ruleId`) REFERENCES `exclusion_rule`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                        "FOREIGN KEY(`personId`) REFERENCES `person`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE )",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_exclusion_member_personId` ON `exclusion_member` (`personId`)",
+                )
+            }
+        }
+
+        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
 
         fun build(context: Context, name: String = NAME): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name)

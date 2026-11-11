@@ -38,13 +38,19 @@ class MigrationTest {
     }
 
     /** Schéma v1, tel que créé par Room pour la première version de l'app. */
-    private fun createVersion1(fill: SQLiteDatabase.() -> Unit) {
+    private fun createVersion1(fill: SQLiteDatabase.() -> Unit) = createDatabase(1, fill)
+
+    /**
+     * Schéma v1 ou v2 (app/schemas/…/2.json). Seule différence : le numéro devient facultatif en v2.
+     */
+    private fun createDatabase(version: Int, fill: SQLiteDatabase.() -> Unit) {
         val file = context.getDatabasePath(dbName)
         file.parentFile?.mkdirs()
         val db = SQLiteDatabase.openOrCreateDatabase(file, null)
+        val phoneColumn = if (version == 1) "`phoneE164` TEXT NOT NULL" else "`phoneE164` TEXT"
         db.execSQL(
             "CREATE TABLE IF NOT EXISTS `person` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-                "`name` TEXT NOT NULL, `phoneE164` TEXT NOT NULL)",
+                "`name` TEXT NOT NULL, $phoneColumn)",
         )
         db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_person_phoneE164` ON `person` (`phoneE164`)")
         db.execSQL(
@@ -59,14 +65,40 @@ class MigrationTest {
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_group_member_personId` ON `group_member` (`personId`)")
         db.fill()
-        db.version = 1
+        db.version = version
         db.close()
+    }
+
+    @Test
+    fun `migration 2 vers 3 conserve les données et ajoute les exclusions`(): Unit = runBlocking {
+        createDatabase(2) {
+            execSQL("INSERT INTO person (id, name, phoneE164) VALUES (1, 'Alice', '+33611111111')")
+            execSQL("INSERT INTO person (id, name, phoneE164) VALUES (2, 'Bob', NULL)")
+            execSQL("INSERT INTO santa_group (id, name) VALUES (10, 'Famille')")
+            execSQL("INSERT INTO group_member (groupId, personId) VALUES (10, 1)")
+            execSQL("INSERT INTO group_member (groupId, personId) VALUES (10, 2)")
+        }
+
+        val db = openCurrent()
+
+        assertEquals(
+            listOf(Person(1, "Alice", "+33611111111"), Person(2, "Bob", null)),
+            db.personDao().observeAll().first().sortedBy { it.id },
+        )
+        assertEquals(2, db.groupDao().observeSummaries().first().single().memberCount)
+        assertEquals(emptyList<ExclusionWithMembers>(), db.groupDao().getExclusions(10))
+
+        val ruleId = db.groupDao().saveExclusion(
+            ExclusionRule(groupId = 10, type = ExclusionType.COUPLE, label = "Mariés"),
+            listOf(ExclusionMember(0, 1, ExclusionRole.MEMBER), ExclusionMember(0, 2, ExclusionRole.MEMBER)),
+        )
+        assertEquals(setOf(1L, 2L), db.groupDao().getExclusion(ruleId)?.members?.map { it.personId }?.toSet())
     }
 
     private fun openCurrent(): AppDatabase = AppDatabase.build(context, dbName).also { database = it }
 
     @Test
-    fun `migration 1 vers 2 conserve personnes, groupes et membres`(): Unit = runBlocking {
+    fun `depuis la v1, personnes, groupes et membres conservés`(): Unit = runBlocking {
         createVersion1 {
             execSQL("INSERT INTO person (id, name, phoneE164) VALUES (1, 'Alice', '+33611111111')")
             execSQL("INSERT INTO person (id, name, phoneE164) VALUES (2, 'Bob', '+33622222222')")
@@ -88,7 +120,7 @@ class MigrationTest {
     }
 
     @Test
-    fun `après migration, plusieurs personnes peuvent n'avoir aucun téléphone`(): Unit = runBlocking {
+    fun `depuis la v1, plusieurs personnes peuvent n'avoir aucun téléphone`(): Unit = runBlocking {
         createVersion1 {
             execSQL("INSERT INTO person (id, name, phoneE164) VALUES (1, 'Alice', '+33611111111')")
         }
@@ -104,7 +136,7 @@ class MigrationTest {
     }
 
     @Test
-    fun `après migration, un numéro reste unique`(): Unit = runBlocking {
+    fun `depuis la v1, un numéro reste unique`(): Unit = runBlocking {
         createVersion1 {
             execSQL("INSERT INTO person (id, name, phoneE164) VALUES (1, 'Alice', '+33611111111')")
         }
@@ -119,7 +151,7 @@ class MigrationTest {
     }
 
     @Test
-    fun `après migration, supprimer une personne la retire de ses groupes`(): Unit = runBlocking {
+    fun `depuis la v1, supprimer une personne la retire de ses groupes`(): Unit = runBlocking {
         createVersion1 {
             execSQL("INSERT INTO person (id, name, phoneE164) VALUES (1, 'Alice', '+33611111111')")
             execSQL("INSERT INTO santa_group (id, name) VALUES (10, 'Famille')")
