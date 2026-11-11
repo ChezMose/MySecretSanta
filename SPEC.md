@@ -123,9 +123,18 @@ Un modèle par défaut, modifiable dans les réglages, est copié dans chaque no
 - Un aperçu du message utilise des noms fictifs, jamais le vrai tirage.
 - Un émoji fait passer le SMS en encodage Unicode, limité à 70 caractères par segment au lieu de 160. L'app affiche le nombre de segments estimé.
 
+### 5.8 Partager l'app
+
+Un bouton « Partager » permet de transmettre l'app à quelqu'un, en lui montrant l'écran du téléphone.
+
+- L'écran Partager affiche un QR code vers la page du dépôt GitHub, `https://github.com/ChezMose/MySecretSanta`. Son README explique comment télécharger et installer l'app.
+- Sous le QR code, le même lien est cliquable et s'ouvre dans le navigateur.
+- L'app dessine le QR code elle-même, avec la bibliothèque ZXing, sans accès réseau. Il est toujours noir sur fond blanc, pour être lisible par tous les lecteurs.
+- L'URL est définie à un seul endroit du code : `AppLinks.REPO_URL`.
+
 ## 6. Écrans
 
-L'écran d'accueil a trois onglets : **Tirages**, **Groupes**, **Personnes**.
+L'écran d'accueil a trois onglets : **Tirages**, **Groupes**, **Personnes**. Sa barre du haut porte un bouton **Partager**.
 
 1. **Tirages** : liste des tirages, du plus récent au plus ancien, avec groupe, date et état (*brouillon*, *tiré*, *envoyé*, *révélé*). Bouton « Nouveau tirage ».
 2. **Groupes** : liste des groupes avec leur nombre de membres. Bouton « + ».
@@ -136,6 +145,7 @@ L'écran d'accueil a trois onglets : **Tirages**, **Groupes**, **Personnes**.
 7. **Nouveau tirage** : groupe, participants à cocher, nom, date, budget, message avec aperçu et nombre de segments.
 8. **Tirage** : état de chaque participant, bouton « Tirer au sort », puis « Envoyer les SMS », renvoi individuel, menu « Révéler le tirage ».
 9. **Réglages** : modèle de message par défaut, SIM d'envoi par défaut.
+10. **Partager** : QR code vers le dépôt GitHub, lien cliquable (§5.8).
 
 ## 7. Données
 
@@ -172,7 +182,7 @@ Expo (React Native) a été écarté : `expo-sms` ne fait qu'ouvrir l'app SMS. L
 
 **Signature :** une clé personnelle unique, stockée dans les secrets GitHub et sauvegardée hors du dépôt. Garder toujours la même clé est indispensable : c'est ce qui permet d'installer une nouvelle version par-dessus l'ancienne sans perdre les données.
 
-**Installation :** sur le téléphone, ouvrir `https://github.com/ChezMose/MySecretSanta/releases/download/dev/MySecretSanta.apk` et installer le fichier téléchargé. Le téléphone doit autoriser l'installation d'applications de sources inconnues pour le navigateur. Play Protect peut afficher un avertissement à cause de `SEND_SMS` : il suffit de le valider. L'APK est public, comme le dépôt.
+**Installation :** le [README](README.md) du dépôt explique la procédure pas à pas. C'est la page vers laquelle pointe le QR code de l'écran Partager (§5.8). En résumé : sur le téléphone, ouvrir `https://github.com/ChezMose/MySecretSanta/releases/download/dev/MySecretSanta.apk` et installer le fichier téléchargé. Le téléphone doit autoriser l'installation d'applications de sources inconnues pour le navigateur. Play Protect peut afficher un avertissement à cause de `SEND_SMS` : il suffit de le valider. L'APK est public, comme le dépôt.
 
 ## 9. Critères d'acceptation
 
@@ -187,7 +197,7 @@ Expo (React Native) a été écarté : `expo-sms` ne fait qu'ouvrir l'app SMS. L
 
 ## 10. Étapes de réalisation
 
-1. Projet Android vide, compilé par GitHub Actions, qui s'installe sur le téléphone.
+1. Projet Android vide, compilé par GitHub Actions, qui s'installe sur le téléphone. Écran Partager et README d'installation.
 2. Personnes et groupes (stockage + écrans 2, 3, 4, 6).
 3. Algorithme de tirage et tests unitaires.
 4. Exclusions (écran 5).
