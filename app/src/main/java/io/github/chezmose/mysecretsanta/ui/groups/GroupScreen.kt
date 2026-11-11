@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
@@ -64,7 +65,7 @@ private const val MIN_DRAW_SIZE = 3
 fun GroupScreen(
     onBack: () -> Unit,
     onOpenPerson: (Long) -> Unit,
-    onNewPerson: (groupId: Long) -> Unit,
+    onNewPerson: (groupId: Long, fromContacts: Boolean) -> Unit,
     onOpenGroup: (Long) -> Unit,
     vm: GroupViewModel = viewModel(factory = GroupViewModel.Factory),
 ) {
@@ -168,12 +169,20 @@ fun GroupScreen(
                         Text("Ajouter des personnes du carnet")
                     }
                     OutlinedButton(
-                        onClick = { onNewPerson(vm.groupId) },
+                        onClick = { onNewPerson(vm.groupId, true) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Icon(Icons.Filled.Person, contentDescription = null)
+                        Icon(Icons.Filled.AccountBox, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Créer une nouvelle personne")
+                        Text("Ajouter depuis les contacts")
+                    }
+                    OutlinedButton(
+                        onClick = { onNewPerson(vm.groupId, false) },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Filled.Edit, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("Saisir une nouvelle personne")
                     }
                 }
             }

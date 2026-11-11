@@ -26,14 +26,27 @@ import kotlinx.coroutines.launch
  * Création ou modification d'une personne.
  * @param personId `null` pour une nouvelle personne.
  * @param presetGroupId groupe coché d'office, quand la personne est créée depuis un groupe.
+ * @param fromContacts l'écran ouvre directement le sélecteur de contacts.
  */
 class PersonViewModel(
     private val personId: Long?,
     presetGroupId: Long?,
+    fromContacts: Boolean,
     private val db: AppDatabase,
 ) : ViewModel() {
 
     val isNew = personId == null
+
+    /** Vrai tant que le sélecteur de contacts doit s'ouvrir à l'arrivée sur l'écran (une seule fois). */
+    var pendingContactPicker by mutableStateOf(isNew && fromContacts)
+        private set
+
+    /** La création a été lancée depuis les contacts : annuler le sélecteur annule la création. */
+    val startedFromContacts = isNew && fromContacts
+
+    fun onContactPickerLaunched() {
+        pendingContactPicker = false
+    }
 
     var name by mutableStateOf("")
         private set
@@ -140,6 +153,7 @@ class PersonViewModel(
                 PersonViewModel(
                     personId = args.get<Long>("personId")?.takeIf { it >= 0 },
                     presetGroupId = args.get<Long>("groupId")?.takeIf { it >= 0 },
+                    fromContacts = args.get<Boolean>("fromContacts") ?: false,
                     db = app.database,
                 )
             }

@@ -1,11 +1,16 @@
 package io.github.chezmose.mysecretsanta.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.AccountBox
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
@@ -13,6 +18,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -24,7 +32,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.chezmose.mysecretsanta.ui.common.EmptyState
 import io.github.chezmose.mysecretsanta.ui.common.NameDialog
@@ -46,10 +56,11 @@ fun HomeScreen(
     onShare: () -> Unit,
     onOpenGroup: (Long) -> Unit,
     onOpenPerson: (Long) -> Unit,
-    onNewPerson: () -> Unit,
+    onNewPerson: (fromContacts: Boolean) -> Unit,
 ) {
     var tab by rememberSaveable { mutableStateOf(HomeTab.Draws) }
     var showNewGroup by rememberSaveable { mutableStateOf(false) }
+    var showNewPersonChoice by rememberSaveable { mutableStateOf(false) }
     val groupsVm: GroupsViewModel = viewModel(factory = GroupsViewModel.Factory)
     val peopleVm: PeopleViewModel = viewModel(factory = PeopleViewModel.Factory)
 
@@ -84,7 +95,7 @@ fun HomeScreen(
                     text = { Text("Nouveau groupe") },
                 )
                 HomeTab.People -> ExtendedFloatingActionButton(
-                    onClick = onNewPerson,
+                    onClick = { showNewPersonChoice = true },
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     text = { Text("Nouvelle personne") },
                 )
@@ -118,5 +129,29 @@ fun HomeScreen(
             },
             onDismiss = { showNewGroup = false },
         )
+    }
+
+    if (showNewPersonChoice) {
+        ModalBottomSheet(onDismissRequest = { showNewPersonChoice = false }) {
+            ListItem(
+                headlineContent = { Text("Choisir dans les contacts") },
+                leadingContent = { Icon(Icons.Filled.AccountBox, contentDescription = null) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable {
+                    showNewPersonChoice = false
+                    onNewPerson(true)
+                },
+            )
+            ListItem(
+                headlineContent = { Text("Saisir à la main") },
+                leadingContent = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable {
+                    showNewPersonChoice = false
+                    onNewPerson(false)
+                },
+            )
+            Spacer(Modifier.height(24.dp))
+        }
     }
 }

@@ -38,6 +38,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,6 +77,23 @@ fun PersonScreen(
                 val contact = withContext(Dispatchers.IO) { readContact(context, uri) }
                 if (contact != null) vm.fillFromContact(contact.first, contact.second)
             }
+        } else if (vm.startedFromContacts && vm.name.isEmpty() && vm.phone.isEmpty()) {
+            // Création lancée depuis les contacts, puis sélecteur annulé : rien à créer.
+            onBack()
+        }
+    }
+    val launchContactPicker = {
+        try {
+            pickContact.launch(Unit)
+        } catch (_: ActivityNotFoundException) {
+            // Pas d'app Contacts : la saisie manuelle reste possible.
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (vm.pendingContactPicker) {
+            vm.onContactPickerLaunched()
+            launchContactPicker()
         }
     }
 
@@ -108,13 +126,7 @@ fun PersonScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedButton(
-                onClick = {
-                    try {
-                        pickContact.launch(Unit)
-                    } catch (_: ActivityNotFoundException) {
-                        // Pas d'app Contacts : la saisie manuelle reste possible.
-                    }
-                },
+                onClick = launchContactPicker,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Icon(Icons.Filled.AccountBox, contentDescription = null)

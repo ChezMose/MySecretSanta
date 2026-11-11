@@ -15,11 +15,15 @@ private object Routes {
     const val HOME = "home"
     const val SHARE = "share"
     const val GROUP = "group/{groupId}"
-    const val PERSON = "person?personId={personId}&groupId={groupId}"
+    const val PERSON = "person?personId={personId}&groupId={groupId}&fromContacts={fromContacts}"
 
     fun group(groupId: Long) = "group/$groupId"
     fun editPerson(personId: Long) = "person?personId=$personId"
-    fun newPerson(groupId: Long? = null) = if (groupId == null) "person" else "person?groupId=$groupId"
+
+    /** @param fromContacts ouvre directement le sélecteur de contacts. */
+    fun newPerson(groupId: Long?, fromContacts: Boolean): String =
+        listOfNotNull(groupId?.let { "groupId=$it" }, "fromContacts=$fromContacts")
+            .joinToString("&", prefix = "person?")
 }
 
 @Composable
@@ -32,7 +36,7 @@ fun AppNavHost(version: String) {
                 onShare = { nav.navigate(Routes.SHARE) },
                 onOpenGroup = { nav.navigate(Routes.group(it)) },
                 onOpenPerson = { nav.navigate(Routes.editPerson(it)) },
-                onNewPerson = { nav.navigate(Routes.newPerson()) },
+                onNewPerson = { fromContacts -> nav.navigate(Routes.newPerson(null, fromContacts)) },
             )
         }
         composable(Routes.SHARE) {
@@ -45,7 +49,9 @@ fun AppNavHost(version: String) {
             GroupScreen(
                 onBack = { nav.back() },
                 onOpenPerson = { nav.navigate(Routes.editPerson(it)) },
-                onNewPerson = { groupId -> nav.navigate(Routes.newPerson(groupId)) },
+                onNewPerson = { groupId, fromContacts ->
+                    nav.navigate(Routes.newPerson(groupId, fromContacts))
+                },
                 onOpenGroup = { nav.navigate(Routes.group(it)) },
             )
         }
@@ -54,6 +60,7 @@ fun AppNavHost(version: String) {
             arguments = listOf(
                 navArgument("personId") { type = NavType.LongType; defaultValue = -1L },
                 navArgument("groupId") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("fromContacts") { type = NavType.BoolType; defaultValue = false },
             ),
         ) {
             PersonScreen(onBack = { nav.back() })
