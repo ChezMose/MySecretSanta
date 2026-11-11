@@ -230,7 +230,7 @@ Expo (React Native) a été écarté : `expo-sms` ne fait qu'ouvrir l'app SMS. L
 
 1. ✅ Projet Android vide, compilé et signé par GitHub Actions, qui s'installe sur le téléphone. Écran Partager et README d'installation.
 2. ✅ Personnes et groupes (stockage + écrans 2, 3, 4, 6), dont les personnes sans téléphone.
-3. Algorithme de tirage et tests unitaires.
+3. ✅ Algorithme de tirage et tests unitaires.
 4. Exclusions (écran 5).
 5. Création d'un tirage et modèle de message (écrans 7, 9).
 6. Envoi des SMS, suivi des états, historique (écrans 1, 8).
