@@ -23,6 +23,9 @@ object Gsm {
         return length
     }
 
+    private val OPENING_GUILLEMET = Regex("«[\\s  ]*")
+    private val CLOSING_GUILLEMET = Regex("[\\s  ]*»")
+
     private val REPLACEMENTS: Map<Char, String> = buildMap {
         fun map(chars: String, replacement: String) {
             for (char in chars) put(char, replacement)
@@ -63,11 +66,13 @@ object Gsm {
      * et retire tout le reste (émojis, caractères invisibles…).
      */
     fun sanitize(text: String): String = buildString {
+        // Guillemets français : « Noël » devient "Noel", sans les espaces intérieures.
+        val source = text.replace(OPENING_GUILLEMET, "\"").replace(CLOSING_GUILLEMET, "\"")
         var offset = 0
-        while (offset < text.length) {
-            val codePoint = text.codePointAt(offset)
+        while (offset < source.length) {
+            val codePoint = source.codePointAt(offset)
             if (Character.charCount(codePoint) == 1) {
-                val char = text[offset]
+                val char = source[offset]
                 when {
                     isGsm(char) -> append(char)
                     char in REPLACEMENTS -> append(REPLACEMENTS.getValue(char))
