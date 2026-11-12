@@ -82,9 +82,65 @@ class MigrationTest {
                 "CREATE INDEX IF NOT EXISTS `index_exclusion_member_personId` ON `exclusion_member` (`personId`)",
             )
         }
+        if (version >= 4) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `draw` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`groupId` INTEGER, `name` TEXT NOT NULL, `dateEpochDay` INTEGER, `budget` TEXT, " +
+                    "`messageTemplate` TEXT NOT NULL, `status` TEXT NOT NULL, `allowReciprocal` INTEGER NOT NULL, " +
+                    "`revealed` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, " +
+                    "FOREIGN KEY(`groupId`) REFERENCES `santa_group`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_draw_groupId` ON `draw` (`groupId`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `participant` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`drawId` INTEGER NOT NULL, `personId` INTEGER, `name` TEXT NOT NULL, `phoneE164` TEXT, " +
+                    "FOREIGN KEY(`drawId`) REFERENCES `draw`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                    "FOREIGN KEY(`personId`) REFERENCES `person`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_participant_drawId` ON `participant` (`drawId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_participant_personId` ON `participant` (`personId`)")
+        }
         db.fill()
         db.version = version
         db.close()
+    }
+
+    @Test
+    fun `migration 4 vers 5 conserve les brouillons et ajoute le suivi des envois`(): Unit = runBlocking {
+        createDatabase(4) {
+            execSQL("INSERT INTO person (id, name, phoneE164) VALUES (1, 'Alice', '+33611111111')")
+            execSQL("INSERT INTO person (id, name, phoneE164) VALUES (2, 'Bob', '+33622222222')")
+            execSQL("INSERT INTO person (id, name, phoneE164) VALUES (3, 'Léo', NULL)")
+            execSQL("INSERT INTO santa_group (id, name) VALUES (10, 'Famille')")
+            for (personId in 1..3) execSQL("INSERT INTO group_member (groupId, personId) VALUES (10, $personId)")
+            execSQL(
+                "INSERT INTO draw (id, groupId, name, dateEpochDay, budget, messageTemplate, status, " +
+                    "allowReciprocal, revealed, createdAt) " +
+                    "VALUES (7, 10, 'Noël', NULL, '30 €', 'Tu offres à {receveur}.', 'DRAFT', 0, 0, 1)",
+            )
+            execSQL("INSERT INTO participant (id, drawId, personId, name, phoneE164) VALUES (1, 7, 1, 'Alice', '+33611111111')")
+            execSQL("INSERT INTO participant (id, drawId, personId, name, phoneE164) VALUES (2, 7, 2, 'Bob', '+33622222222')")
+            execSQL("INSERT INTO participant (id, drawId, personId, name, phoneE164) VALUES (3, 7, 3, 'Léo', NULL)")
+        }
+
+        val db = openCurrent()
+
+        val draw = db.drawDao().get(7)!!
+        assertEquals("30 €", draw.budget)
+        assertEquals(DrawStatus.DRAFT, draw.status)
+        val participants = db.drawDao().participants(7)
+        assertEquals(setOf("Alice", "Bob", "Léo"), participants.map { it.name }.toSet())
+        participants.forEach {
+            assertEquals(null, it.status)
+            assertEquals(null, it.receiverParticipantId)
+        }
+        assertEquals(false, db.drawDao().observeSummaries().first().single().revealed)
+
+        assertEquals(
+            io.github.chezmose.mysecretsanta.draw.DrawRunner.Outcome.Done,
+            io.github.chezmose.mysecretsanta.draw.DrawRunner(db, java.util.Random(1)).run(7),
+        )
+        assertEquals(DeliveryStatus.TO_SHOW, db.drawDao().participants(7).single { it.name == "Léo" }.status)
     }
 
     @Test

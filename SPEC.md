@@ -97,7 +97,9 @@ Les exclusions appartiennent à un groupe et s'appliquent à chacun de ses tirag
 - Si aucune répartition ne respecte les exclusions, l'app affiche un message clair et n'envoie rien.
 - Si une répartition existe seulement en autorisant un échange réciproque, l'app le dit et propose de lever cette règle pour ce tirage.
 
-**Figer le tirage :** au moment du tirage, l'app fige la liste des participants, leurs noms et numéros. Modifier ensuite le groupe ou une personne ne change pas un tirage déjà fait. Refaire un tirage déjà envoyé demande une confirmation.
+**Tirer au sort :** depuis l'écran du brouillon, bouton « Tirer au sort ». L'app fige alors la liste des participants (cochés et toujours membres du groupe) avec leurs noms et numéros du moment, revérifie le message, puis tire au sort. Modifier ensuite le groupe ou une personne ne change pas un tirage déjà fait. Si le tirage n'est possible qu'avec un échange réciproque, l'app propose de l'accepter pour ce tirage, puis relance le tirage.
+
+**Refaire le tirage :** menu de l'écran Tirage. Le tirage redevient un brouillon (participants conservés, résultats effacés), après une confirmation qui prévient si des résultats ont déjà été transmis.
 
 **Algorithme** ([SecretSanta.kt](app/src/main/java/io/github/chezmose/mysecretsanta/draw/SecretSanta.kt)) :
 
@@ -113,20 +115,20 @@ Les tests ([SecretSantaTest.kt](app/src/test/java/io/github/chezmose/mysecretsan
 
 L'organisateur participe souvent au tirage. Il ne doit donc pas voir les résultats.
 
-- Après le tirage, l'écran n'affiche que l'état d'envoi de chaque participant (§5.6), jamais à qui il offre.
+- Après le tirage, l'écran n'affiche que l'état de transmission de chaque participant (§5.6), jamais à qui il offre.
 - Le tirage est conservé, même une fois l'échange passé. Il sert à renvoyer un SMS, sans l'afficher, et à garder l'historique.
-- Une action « Révéler le tirage », derrière une double confirmation, permet de le consulter. L'app enregistre que le tirage a été révélé et l'indique.
+- Une action « Révéler le tirage » (menu de l'écran Tirage), derrière une double confirmation, affiche « donneur → receveur » pour chacun. L'app enregistre que le tirage a été révélé : il apparaît comme « Révélé » dans les listes.
 
 **Limite connue :** quand une app qui n'est pas l'app SMS par défaut envoie un SMS, Android le copie dans l'historique de l'app SMS du téléphone. Les messages envoyés apparaissent donc dans les conversations de l'organisateur. L'app ne peut pas l'empêcher. Il faut le signaler à l'utilisateur avant l'envoi, avec le conseil de ne pas ouvrir ces conversations, ou de les supprimer.
 
 ### 5.6 Envoi des SMS
 
-- Un bouton « Envoyer les SMS » envoie un message à chaque participant, après confirmation (nombre de SMS, rappel de la limite §5.5).
-- La permission `SEND_SMS` est demandée au moment du premier envoi. Si elle est refusée, l'app explique pourquoi elle en a besoin et renvoie vers les réglages.
+- Un bouton « Envoyer les SMS (N) » envoie les SMS restants (jamais envoyés ou en échec), après une confirmation qui rappelle la limite §5.5. Les SMS partent l'un après l'autre, à une seconde d'intervalle.
+- La permission `SEND_SMS` est demandée au moment du premier envoi, avec la permission facultative de lire l'état du téléphone (pour lister les SIM). Si l'envoi de SMS est refusé, l'app explique pourquoi elle en a besoin et ouvre les réglages de l'app.
 - Les messages longs sont découpés (`divideMessage` / `sendMultipartTextMessage`).
-- Suivi par participant : *En attente* → *Envoyé* → *Distribué* (accusé de réception, si l'opérateur le fournit), ou *Échec* avec le motif (pas de réseau, numéro invalide…).
-- Renvoyer le SMS d'un seul participant, par exemple après un échec ou un message perdu.
-- Double SIM : choix de la SIM d'envoi s'il y en a plusieurs.
+- Suivi par participant : *SMS à envoyer* → *Envoi en cours* → *SMS envoyé* → *SMS distribué* (accusé de réception, si l'opérateur le fournit), ou *Échec* avec le motif (pas de réseau, mode avion, limite d'envoi…). Le tirage passe à « Envoyé » quand chaque participant a reçu (ou vu, §5.9) son résultat.
+- Renvoyer le SMS d'un seul participant (bouton d'envoi sur sa ligne), par exemple après un échec ou un message perdu.
+- Double SIM : la confirmation d'envoi propose de choisir la SIM ; le choix est retenu pour les envois suivants. Avec une seule SIM, ou sans la permission de lire l'état du téléphone, le SMS part par la SIM par défaut.
 - Android limite le nombre de SMS envoyés par une app en peu de temps (environ 30 en 30 minutes, selon les constructeurs). Au-delà, le système demande à l'utilisateur d'autoriser l'envoi. L'app doit tolérer cette demande : envoyer les SMS l'un après l'autre et reprendre les envois restés en attente.
 
 ### 5.7 Message
@@ -171,7 +173,7 @@ Certains participants n'ont pas de téléphone, par exemple un enfant. Ils parti
 - Sans annulation, l'écran affiche ensuite : « XX, tu offres un cadeau à **YY** », avec un bouton pour masquer le résultat et revenir à l'écran Tirage.
 - Le bouton reste disponible, pour revoir le résultat si XX l'a oublié. L'état du participant passe à *Vu* au premier affichage, comme *Envoyé* pour un SMS.
 
-La fiche personne est faite (étape 2). Le bouton « Voir pour XX » viendra avec l'écran Tirage (§10, étape 7).
+Fait à l'étape 6, avec l'écran Tirage.
 
 ## 6. Écrans
 
@@ -180,12 +182,12 @@ L'écran d'accueil a trois onglets : **Tirages**, **Groupes**, **Personnes**. Sa
 1. **Tirages** : liste des tirages, du plus récent au plus ancien, avec groupe, nombre de participants et état (*brouillon*, *tiré*, *envoyé*, *révélé*). Bouton « Nouveau tirage ».
 2. **Groupes** : liste des groupes avec leur nombre de membres. Bouton « + ».
 3. **Personnes** : carnet, avec recherche par nom ou numéro. Bouton « Nouvelle personne », qui propose *Choisir dans les contacts* ou *Saisir à la main*.
-4. **Groupe** : membres, ajout depuis le carnet, depuis les contacts ou par saisie, exclusions, historique des tirages, bouton « Nouveau tirage ».
+4. **Groupe** : membres, ajout depuis le carnet, depuis les contacts ou par saisie, exclusions, historique des tirages (avec leur état), bouton « Nouveau tirage ».
 5. **Exclusion** (création / modification) : type, personnes concernées, libellé.
 6. **Personne** (création / modification) : nom, case « Pas de téléphone », numéro, groupes dont elle est membre (cases à cocher). En création depuis les contacts, le sélecteur s'ouvre d'abord et pré-remplit le nom et le numéro.
 7. **Nouveau tirage / Modifier le tirage** (brouillon) : groupe (au choix depuis l'onglet Tirages), nom, budget, participants à cocher avec l'alerte de faisabilité, message avec aperçu et longueur (un seul SMS). Suppression du brouillon.
-8. **Tirage** : état de chaque participant, bouton « Tirer au sort », puis « Envoyer les SMS », renvoi individuel, bouton « Voir pour XX » par participant sans téléphone (§5.9), menu « Révéler le tirage ».
-9. **Réglages** : modèle de message par défaut, version de l'app. (SIM d'envoi par défaut : étape 6.)
+8. **Tirage** : groupe, budget. Brouillon : faisabilité, participants, boutons « Tirer au sort » et « Modifier le tirage ». Tiré : bilan des envois, bouton « Envoyer les SMS (N) », état de chaque participant avec renvoi individuel, bouton « Voir pour XX » par participant sans téléphone (§5.9), menu « Révéler le tirage », « Refaire le tirage », « Supprimer le tirage ».
+9. **Réglages** : modèle de message par défaut, version de l'app.
 10. **Partager** : QR code vers le dépôt GitHub, lien cliquable (§5.8).
 
 ## 7. Données
@@ -200,8 +202,7 @@ Stockage local SQLite.
 | `ExclusionRule` | id, groupId, type (couple, sens unique, foyer), label? |
 | `ExclusionMember` | ruleId, personId, role (donneur, receveur ou membre) |
 | `Draw` | id, groupId? (`null` si le groupe est supprimé), name, dateEpochDay? (inutilisée depuis le retrait de la date), budget?, messageTemplate, status (brouillon, tiré, envoyé), allowReciprocal, revealed, createdAt |
-| `Participant` | id, drawId, personId? (`null` si la personne est supprimée), name, phoneE164? : sélection en cours dans un brouillon, copie figée au tirage |
-| `Assignment` | drawId, giverParticipantId, receiverParticipantId, status (SMS ou *Vu*), smsError?, sentAt? |
+| `Participant` | id, drawId, personId? (`null` si la personne est supprimée), name, phoneE164? : sélection en cours dans un brouillon, copie figée au tirage ; après le tirage : receiverParticipantId (secret), status (à envoyer, en cours, envoyé, distribué, échec, à montrer, montré), statusError?, statusAt? |
 
 Les sauvegardes automatiques Android (`allowBackup`) sont désactivées : elles enverraient les tirages dans le cloud Google.
 

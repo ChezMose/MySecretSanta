@@ -8,6 +8,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.chezmose.mysecretsanta.ui.draws.DrawEditScreen
+import io.github.chezmose.mysecretsanta.ui.draws.DrawScreen
 import io.github.chezmose.mysecretsanta.ui.exclusions.ExclusionScreen
 import io.github.chezmose.mysecretsanta.ui.groups.GroupScreen
 import io.github.chezmose.mysecretsanta.ui.people.PersonScreen
@@ -22,6 +23,9 @@ private object Routes {
     const val PERSON = "person?personId={personId}&groupId={groupId}&fromContacts={fromContacts}"
     const val EXCLUSION = "exclusion/{groupId}?ruleId={ruleId}"
     const val DRAW_EDIT = "draw/edit?drawId={drawId}&groupId={groupId}"
+    const val DRAW = "draws/{drawId}"
+
+    fun draw(drawId: Long) = "draws/$drawId"
 
     fun group(groupId: Long) = "group/$groupId"
     fun newExclusion(groupId: Long) = "exclusion/$groupId"
@@ -45,7 +49,7 @@ fun AppNavHost(version: String) {
             HomeScreen(
                 onShare = { nav.navigate(Routes.SHARE) },
                 onSettings = { nav.navigate(Routes.SETTINGS) },
-                onOpenDraw = { nav.navigate(Routes.editDraw(it)) },
+                onOpenDraw = { nav.navigate(Routes.draw(it)) },
                 onNewDraw = { nav.navigate(Routes.newDraw(null)) },
                 onOpenGroup = { nav.navigate(Routes.group(it)) },
                 onOpenPerson = { nav.navigate(Routes.editPerson(it)) },
@@ -72,6 +76,7 @@ fun AppNavHost(version: String) {
                 onAddExclusion = { groupId -> nav.navigate(Routes.newExclusion(groupId)) },
                 onOpenExclusion = { groupId, ruleId -> nav.navigate(Routes.editExclusion(groupId, ruleId)) },
                 onNewDraw = { groupId -> nav.navigate(Routes.newDraw(groupId)) },
+                onOpenDraw = { nav.navigate(Routes.draw(it)) },
             )
         }
         composable(
@@ -100,8 +105,27 @@ fun AppNavHost(version: String) {
                 navArgument("groupId") { type = NavType.LongType; defaultValue = -1L },
             ),
         ) {
-            // Étape 5 : un tirage reste en brouillon ; l'écran Tirage (tirage et envoi) viendra à l'étape 6.
-            DrawEditScreen(onBack = { nav.back() }, onSaved = { nav.back() })
+            DrawEditScreen(
+                onBack = { nav.back() },
+                onSaved = { drawId, wasNew ->
+                    if (wasNew) {
+                        // Nouveau tirage : on arrive sur son écran, sans repasser par le formulaire au retour.
+                        nav.navigate(Routes.draw(drawId)) { popUpTo(Routes.DRAW_EDIT) { inclusive = true } }
+                    } else {
+                        nav.back()
+                    }
+                },
+                onDeleted = { nav.popBackStack(Routes.HOME, inclusive = false) },
+            )
+        }
+        composable(
+            Routes.DRAW,
+            arguments = listOf(navArgument("drawId") { type = NavType.LongType }),
+        ) {
+            DrawScreen(
+                onBack = { nav.back() },
+                onEdit = { drawId -> nav.navigate(Routes.editDraw(drawId)) },
+            )
         }
     }
 }

@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.chezmose.mysecretsanta.data.DrawStatus
+import io.github.chezmose.mysecretsanta.data.DrawSummary
 import io.github.chezmose.mysecretsanta.ui.common.EmptyState
 
 val DrawStatus.label: String
@@ -28,6 +29,10 @@ val DrawStatus.label: String
     }
 
 fun participantsLabel(count: Int): String = if (count <= 1) "$count participant" else "$count participants"
+
+/** « Brouillon », « Tiré », « Envoyé », ou « Révélé » si le tirage a été révélé. */
+val DrawSummary.statusLabel: String
+    get() = if (revealed) "Révélé" else status.label
 
 @Composable
 fun DrawsTab(vm: DrawsViewModel, onOpenDraw: (Long) -> Unit) {
@@ -62,7 +67,7 @@ fun DrawsTab(vm: DrawsViewModel, onOpenDraw: (Long) -> Unit) {
                 leadingContent = { Icon(Icons.Filled.Star, contentDescription = null) },
                 trailingContent = {
                     Text(
-                        draw.status.label,
+                        draw.statusLabel,
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.primary,
                     )

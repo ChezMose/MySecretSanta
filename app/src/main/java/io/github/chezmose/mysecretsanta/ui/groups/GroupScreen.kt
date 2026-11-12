@@ -62,6 +62,8 @@ import io.github.chezmose.mysecretsanta.ui.exclusions.describe
 import io.github.chezmose.mysecretsanta.ui.exclusions.icon
 import io.github.chezmose.mysecretsanta.ui.exclusions.label
 import io.github.chezmose.mysecretsanta.ui.common.NameDialog
+import io.github.chezmose.mysecretsanta.ui.draws.participantsLabel
+import io.github.chezmose.mysecretsanta.ui.draws.statusLabel
 import io.github.chezmose.mysecretsanta.util.PhoneNumbers
 import io.github.chezmose.mysecretsanta.util.membersLabel
 
@@ -77,6 +79,7 @@ fun GroupScreen(
     onAddExclusion: (groupId: Long) -> Unit,
     onOpenExclusion: (groupId: Long, ruleId: Long) -> Unit,
     onNewDraw: (groupId: Long) -> Unit,
+    onOpenDraw: (drawId: Long) -> Unit,
     vm: GroupViewModel = viewModel(factory = GroupViewModel.Factory),
 ) {
     val group by vm.group.collectAsStateWithLifecycle()
@@ -84,6 +87,7 @@ fun GroupScreen(
     val candidates by vm.candidates.collectAsStateWithLifecycle()
     val exclusions by vm.exclusions.collectAsStateWithLifecycle()
     val feasibility by vm.feasibility.collectAsStateWithLifecycle()
+    val draws by vm.draws.collectAsStateWithLifecycle()
     val namesById = members.associate { it.id to it.name }
     var menuOpen by remember { mutableStateOf(false) }
     var showRename by rememberSaveable { mutableStateOf(false) }
@@ -263,6 +267,36 @@ fun GroupScreen(
                     Spacer(Modifier.width(8.dp))
                     Text("Ajouter une exclusion")
                 }
+            }
+
+            item {
+                SectionHeader("Tirages (${draws.size})")
+            }
+            if (draws.isEmpty()) {
+                item {
+                    Text(
+                        "Aucun tirage pour l'instant.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
+            }
+            items(draws, key = { "draw-${it.id}" }) { draw ->
+                ListItem(
+                    headlineContent = { Text(draw.name) },
+                    supportingContent = { Text(participantsLabel(draw.participantCount)) },
+                    leadingContent = { Icon(Icons.Filled.Star, contentDescription = null) },
+                    trailingContent = {
+                        Text(
+                            draw.statusLabel,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    modifier = Modifier.clickable { onOpenDraw(draw.id) },
+                )
+                HorizontalDivider()
             }
         }
     }

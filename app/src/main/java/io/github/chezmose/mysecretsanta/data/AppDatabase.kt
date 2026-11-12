@@ -24,7 +24,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         Draw::class,
         Participant::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -127,7 +127,17 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+        /** v4 → v5 : résultat du tirage et transmission, sur chaque participant. */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `participant` ADD COLUMN `receiverParticipantId` INTEGER")
+                db.execSQL("ALTER TABLE `participant` ADD COLUMN `status` TEXT")
+                db.execSQL("ALTER TABLE `participant` ADD COLUMN `statusError` TEXT")
+                db.execSQL("ALTER TABLE `participant` ADD COLUMN `statusAt` INTEGER")
+            }
+        }
+
+        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
 
         fun build(context: Context, name: String = NAME): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name)

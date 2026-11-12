@@ -15,7 +15,15 @@ class AppSettings(context: Context) {
             prefs.edit().putString(KEY_TEMPLATE, value).apply()
         }
 
+    /** SIM choisie au dernier envoi, sur un téléphone à plusieurs SIM ; `null` : SIM par défaut. */
+    var smsSubscriptionId: Int?
+        get() = prefs.getInt(KEY_SUBSCRIPTION, -1).takeIf { it >= 0 }
+        set(value) {
+            prefs.edit().putInt(KEY_SUBSCRIPTION, value ?: -1).apply()
+        }
+
     private companion object {
+        const val KEY_SUBSCRIPTION = "sms_subscription_id"
         // « _v2 » : les modèles enregistrés avant le passage à un seul SMS sans date sont ignorés.
         const val KEY_TEMPLATE = "default_message_template_v2"
     }

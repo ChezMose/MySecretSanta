@@ -205,7 +205,43 @@ data class Participant(
     val personId: Long?,
     val name: String,
     val phoneE164: String?,
+    /** Après le tirage : le participant à qui celui-ci offre un cadeau. Secret : jamais affiché sans demande. */
+    val receiverParticipantId: Long? = null,
+    /** Après le tirage : où en est la transmission du résultat. `null` dans un brouillon. */
+    val status: DeliveryStatus? = null,
+    /** Motif de l'échec, si [status] vaut [DeliveryStatus.FAILED]. */
+    val statusError: String? = null,
+    /** Dernier changement de [status], en millisecondes depuis 1970. */
+    val statusAt: Long? = null,
 )
+
+/** Transmission du résultat à un participant (SPEC.md §5.6, §5.9). Stocké en texte : ne jamais renommer. */
+enum class DeliveryStatus {
+    /** SMS à envoyer. */
+    PENDING,
+
+    /** SMS confié au téléphone, en attente du compte rendu d'envoi. */
+    SENDING,
+
+    /** SMS parti. */
+    SENT,
+
+    /** SMS reçu par le destinataire (accusé de réception de l'opérateur). */
+    DELIVERED,
+
+    /** Envoi échoué : voir [Participant.statusError]. */
+    FAILED,
+
+    /** Pas de téléphone : résultat à montrer sur le téléphone de l'organisateur. */
+    TO_SHOW,
+
+    /** Pas de téléphone : résultat montré. */
+    SHOWN,
+    ;
+
+    /** Le résultat est transmis : rien à refaire pour ce participant. */
+    val isDone: Boolean get() = this == SENT || this == DELIVERED || this == SHOWN
+}
 
 /** Un tirage pour la liste des tirages. */
 data class DrawSummary(
@@ -213,6 +249,7 @@ data class DrawSummary(
     val name: String,
     val dateEpochDay: Long?,
     val status: DrawStatus,
+    val revealed: Boolean,
     val groupName: String?,
     val participantCount: Int,
 )

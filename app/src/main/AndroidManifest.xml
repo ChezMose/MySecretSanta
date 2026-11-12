@@ -3,6 +3,13 @@
 
     <!-- Pas de permission INTERNET : l'app fonctionne hors ligne (voir SPEC.md §2). -->
 
+    <!-- Envoi direct des SMS du tirage (SPEC.md §5.6), demandée au premier envoi. -->
+    <uses-permission android:name="android.permission.SEND_SMS" />
+    <!-- Facultative : lister les cartes SIM pour choisir celle qui envoie, sur un téléphone à deux SIM. -->
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <!-- L'app reste installable sur une tablette sans téléphonie (sans envoi de SMS). -->
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+
     <application
         android:name=".SantaApp"
         android:allowBackup="false"
@@ -19,6 +26,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Comptes rendus d'envoi et de distribution des SMS : intentions explicites, non exporté. -->
+        <receiver
+            android:name=".sms.SmsResultReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

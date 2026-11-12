@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import io.github.chezmose.mysecretsanta.SantaApp
+import io.github.chezmose.mysecretsanta.data.DrawDao
+import io.github.chezmose.mysecretsanta.data.DrawSummary
 import io.github.chezmose.mysecretsanta.data.ExclusionWithMembers
 import io.github.chezmose.mysecretsanta.data.GroupDao
 import io.github.chezmose.mysecretsanta.data.GroupMember
@@ -29,6 +31,7 @@ class GroupViewModel(
     val groupId: Long,
     private val groupDao: GroupDao,
     personDao: PersonDao,
+    drawDao: DrawDao,
 ) : ViewModel() {
 
     val group: StateFlow<SantaGroup?> =
@@ -49,6 +52,11 @@ class GroupViewModel(
         combine(members, exclusions) { m, e -> assessFeasibility(m, e) }
             .flowOn(Dispatchers.Default)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Historique des tirages du groupe, du plus récent au plus ancien. */
+    val draws: StateFlow<List<DrawSummary>> =
+        drawDao.observeSummariesForGroup(groupId)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Personnes du carnet qui ne sont pas encore dans le groupe. */
     val candidates: StateFlow<List<Person>> =
@@ -90,7 +98,7 @@ class GroupViewModel(
             initializer {
                 val app = this[APPLICATION_KEY] as SantaApp
                 val groupId = checkNotNull(createSavedStateHandle().get<Long>("groupId"))
-                GroupViewModel(groupId, app.database.groupDao(), app.database.personDao())
+                GroupViewModel(groupId, app.database.groupDao(), app.database.personDao(), app.database.drawDao())
             }
         }
     }

@@ -45,7 +45,8 @@ import io.github.chezmose.mysecretsanta.ui.common.RadioRow
 @Composable
 fun DrawEditScreen(
     onBack: () -> Unit,
-    onSaved: (drawId: Long) -> Unit,
+    onSaved: (drawId: Long, wasNew: Boolean) -> Unit,
+    onDeleted: () -> Unit,
     vm: DrawEditViewModel = viewModel(factory = DrawEditViewModel.Factory),
 ) {
     val groups by vm.groups.collectAsStateWithLifecycle()
@@ -176,7 +177,7 @@ fun DrawEditScreen(
 
             Spacer(Modifier.height(8.dp))
             Button(
-                onClick = { vm.save(onSaved = onSaved) },
+                onClick = { vm.save { drawId -> onSaved(drawId, vm.isNew) } },
                 enabled = !vm.saving,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -191,7 +192,7 @@ fun DrawEditScreen(
             message = "Ce tirage en brouillon sera supprimé.",
             onConfirm = {
                 confirmDelete = false
-                vm.delete(onDeleted = onBack)
+                vm.delete(onDeleted = onDeleted)
             },
             onDismiss = { confirmDelete = false },
         )

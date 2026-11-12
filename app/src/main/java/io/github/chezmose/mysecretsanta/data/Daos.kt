@@ -128,6 +128,12 @@ abstract class GroupDao {
     )
     abstract fun observeMembers(groupId: Long): Flow<List<Person>>
 
+    @Query(
+        "SELECT p.* FROM person p INNER JOIN group_member m ON m.personId = p.id " +
+            "WHERE m.groupId = :groupId",
+    )
+    abstract suspend fun getMembers(groupId: Long): List<Person>
+
     @Query("SELECT groupId FROM group_member WHERE personId = :personId")
     abstract suspend fun groupIdsOf(personId: Long): List<Long>
 
@@ -226,22 +232,40 @@ abstract class GroupDao {
     }
 }
 
+private const val DRAW_SUMMARY_SELECT =
+    "SELECT d.id AS id, d.name AS name, d.dateEpochDay AS dateEpochDay, d.status AS status, " +
+        "d.revealed AS revealed, g.name AS groupName, " +
+        "(SELECT COUNT(*) FROM participant p WHERE p.drawId = d.id) AS participantCount " +
+        "FROM draw d LEFT JOIN santa_group g ON g.id = d.groupId "
+
 @Dao
 abstract class DrawDao {
-    @Query(
-        "SELECT d.id AS id, d.name AS name, d.dateEpochDay AS dateEpochDay, d.status AS status, " +
-            "g.name AS groupName, " +
-            "(SELECT COUNT(*) FROM participant p WHERE p.drawId = d.id) AS participantCount " +
-            "FROM draw d LEFT JOIN santa_group g ON g.id = d.groupId " +
-            "ORDER BY d.createdAt DESC, d.id DESC",
-    )
+
+    // --- Lecture ---
+
+    @Query(DRAW_SUMMARY_SELECT + "ORDER BY d.createdAt DESC, d.id DESC")
     abstract fun observeSummaries(): Flow<List<DrawSummary>>
+
+    /** Historique d'un groupe, du plus récent au plus ancien. */
+    @Query(DRAW_SUMMARY_SELECT + "WHERE d.groupId = :groupId ORDER BY d.createdAt DESC, d.id DESC")
+    abstract fun observeSummariesForGroup(groupId: Long): Flow<List<DrawSummary>>
 
     @Query("SELECT * FROM draw WHERE id = :id")
     abstract suspend fun get(id: Long): Draw?
 
+    @Query("SELECT * FROM draw WHERE id = :id")
+    abstract fun observe(id: Long): Flow<Draw?>
+
     @Query("SELECT * FROM participant WHERE drawId = :drawId")
     abstract suspend fun participants(drawId: Long): List<Participant>
+
+    @Query("SELECT * FROM participant WHERE drawId = :drawId")
+    abstract fun observeParticipants(drawId: Long): Flow<List<Participant>>
+
+    @Query("SELECT * FROM participant WHERE id = :id")
+    abstract suspend fun getParticipant(id: Long): Participant?
+
+    // --- Écriture ---
 
     @Insert
     abstract suspend fun insertDraw(draw: Draw): Long
@@ -253,10 +277,89 @@ abstract class DrawDao {
     abstract suspend fun delete(id: Long)
 
     @Insert
-    abstract suspend fun insertParticipants(participants: List<Participant>)
+    abstract suspend fun insertParticipants(participants: List<Participant>): List<Long>
 
     @Query("DELETE FROM participant WHERE drawId = :drawId")
     abstract suspend fun clearParticipants(drawId: Long)
+
+    @Query("UPDATE participant SET receiverParticipantId = :receiverId WHERE id = :participantId")
+    abstract suspend fun setReceiver(participantId: Long, receiverId: Long)
+
+    @Query("UPDATE participant SET status = :status, statusError = :error, statusAt = :at WHERE id = :id")
+    abstract suspend fun setStatusRow(id: Long, status: DeliveryStatus, error: String?, at: Long)
+
+    @Query("UPDATE draw SET revealed = 1 WHERE id = :drawId")
+    abstract suspend fun setRevealed(drawId: Long)
+
+    @Query("UPDATE draw SET allowReciprocal = :allow WHERE id = :drawId")
+    abstract suspend fun setAllowReciprocal(drawId: Long, allow: Boolean)
+
+    /** Le tirage passe à « envoyé » quand chaque participant a reçu ou vu son résultat. */
+    @Query(
+        "UPDATE draw SET status = 'SENT' WHERE id = :drawId AND status = 'DRAWN' AND NOT EXISTS (" +
+            "SELECT 1 FROM participant p WHERE p.drawId = :drawId " +
+            "AND (p.status IS NULL OR p.status NOT IN ('SENT', 'DELIVERED', 'SHOWN')))",
+    )
+    abstract suspend fun markSentIfComplete(drawId: Long)
+
+    @Query(
+        "UPDATE participant SET receiverParticipantId = NULL, status = NULL, statusError = NULL, statusAt = NULL " +
+            "WHERE drawId = :drawId",
+    )
+    abstract suspend fun clearResults(drawId: Long)
+
+    @Query("UPDATE draw SET status = 'DRAFT', revealed = 0 WHERE id = :drawId")
+    abstract suspend fun setDraft(drawId: Long)
+
+    @Query(DELETE_DRAFT_PARTICIPANTS_OUTSIDE_GROUP)
+    abstract suspend fun deleteDraftParticipantsOutsideGroup()
+
+    /**
+     * Enregistre le résultat d'un tirage : participants figés (nom et numéro du moment),
+     * receveur de chacun, état de transmission initial. Le tirage passe à « tiré ».
+     * @param assignments donneur → receveur, en identifiants de personnes.
+     */
+    @Transaction
+    open suspend fun saveResult(draw: Draw, participants: List<Person>, assignments: Map<Long, Long>) {
+        updateDraw(draw.copy(status = DrawStatus.DRAWN, revealed = false))
+        clearParticipants(draw.id)
+        val ids = insertParticipants(
+            participants.map {
+                Participant(
+                    drawId = draw.id,
+                    personId = it.id,
+                    name = it.name,
+                    phoneE164 = it.phoneE164,
+                    status = if (it.phoneE164 == null) DeliveryStatus.TO_SHOW else DeliveryStatus.PENDING,
+                )
+            },
+        )
+        val participantIdOf = participants.map { it.id }.zip(ids).toMap()
+        for ((giver, receiver) in assignments) {
+            setReceiver(participantIdOf.getValue(giver), participantIdOf.getValue(receiver))
+        }
+    }
+
+    /**
+     * Met à jour la transmission du résultat d'un participant, puis l'état du tirage.
+     * Un compte rendu d'envoi tardif ne fait pas reculer un SMS déjà distribué.
+     */
+    @Transaction
+    open suspend fun updateStatus(participantId: Long, status: DeliveryStatus, error: String?, at: Long) {
+        val participant = getParticipant(participantId) ?: return
+        if (participant.status == null) return // Brouillon (tirage refait entre-temps) : compte rendu périmé.
+        if (participant.status == DeliveryStatus.DELIVERED && status == DeliveryStatus.SENT) return
+        setStatusRow(participantId, status, error, at)
+        markSentIfComplete(participant.drawId)
+    }
+
+    /** Remet un tirage fait en brouillon : résultats effacés, sélection des participants conservée. */
+    @Transaction
+    open suspend fun resetToDraft(drawId: Long) {
+        clearResults(drawId)
+        setDraft(drawId)
+        deleteDraftParticipantsOutsideGroup()
+    }
 
     /** Crée ou modifie un brouillon et remplace ses participants. Renvoie son identifiant. */
     @Transaction
