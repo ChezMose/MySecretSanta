@@ -23,11 +23,13 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,6 +76,7 @@ fun GroupScreen(
     onOpenGroup: (Long) -> Unit,
     onAddExclusion: (groupId: Long) -> Unit,
     onOpenExclusion: (groupId: Long, ruleId: Long) -> Unit,
+    onNewDraw: (groupId: Long) -> Unit,
     vm: GroupViewModel = viewModel(factory = GroupViewModel.Factory),
 ) {
     val group by vm.group.collectAsStateWithLifecycle()
@@ -124,10 +127,17 @@ fun GroupScreen(
                 },
             )
         },
+        floatingActionButton = {
+            ExtendedFloatingActionButton(
+                onClick = { onNewDraw(vm.groupId) },
+                icon = { Icon(Icons.Filled.Star, contentDescription = null) },
+                text = { Text("Nouveau tirage") },
+            )
+        },
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(innerPadding),
-            contentPadding = PaddingValues(vertical = 8.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp),
         ) {
             when (val status = feasibility) {
                 is Feasibility.Impossible -> item {
@@ -277,7 +287,7 @@ fun GroupScreen(
                 0 -> "Le groupe sera supprimé."
                 1 -> "Le groupe sera supprimé. Son membre reste dans le carnet."
                 else -> "Le groupe sera supprimé. Ses ${membersLabel(members.size)} restent dans le carnet."
-            },
+            } + " Ses tirages en brouillon seront supprimés ; ses tirages déjà faits restent dans l'historique.",
             onConfirm = {
                 showDelete = false
                 vm.delete(onDeleted = onBack)

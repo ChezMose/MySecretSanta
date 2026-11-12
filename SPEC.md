@@ -78,9 +78,11 @@ Les exclusions appartiennent à un groupe et s'appliquent à chacun de ses tirag
 
 **Création :**
 
-- Créer un tirage à partir d'un groupe : nom (obligatoire), date de l'échange (facultative), budget (facultatif, texte libre, ex. « 30 € »).
+- Créer un tirage à partir d'un groupe, depuis l'onglet Tirages (choix du groupe) ou depuis la fiche du groupe : nom (obligatoire, « Noël <année> » proposé), date de l'échange (facultative, calendrier), budget (facultatif, texte libre, ex. « 30 € »).
 - Par défaut tous les membres du groupe participent. On peut décocher les absents pour ce tirage.
-- Minimum 3 participants.
+- Minimum 3 participants. La faisabilité (§5.3) est vérifiée en direct avec les participants cochés.
+- Un tirage reste en **brouillon** tant qu'il n'est pas tiré : tout y reste modifiable, et il peut être supprimé.
+- Un brouillon suit son groupe : une personne qui quitte le groupe, ou qui est supprimée, en est retirée ; supprimer le groupe supprime ses brouillons. Les tirages déjà faits restent dans l'historique, même sans leur groupe.
 
 **Règles du tirage :**
 
@@ -133,9 +135,10 @@ Un modèle par défaut, modifiable dans les réglages, est copié dans chaque no
 
 > 🎅 Bonjour {donneur} ! Pour « {tirage} », tu offres un cadeau à **{receveur}**. Budget : {budget}. Rendez-vous le {date}. Chut, c'est secret !
 
-- Variables : `{donneur}`, `{receveur}`, `{tirage}`, `{budget}`, `{date}`. Une variable dont le champ est vide est retirée avec sa phrase.
-- Un aperçu du message utilise des noms fictifs, jamais le vrai tirage.
-- Un émoji fait passer le SMS en encodage Unicode, limité à 70 caractères par segment au lieu de 160. L'app affiche le nombre de segments estimé.
+- Variables : `{donneur}`, `{receveur}`, `{tirage}`, `{budget}`, `{date}`. Une variable dont le champ est vide est retirée avec sa phrase. La date s'écrit en toutes lettres : « jeudi 24 décembre ».
+- Le message doit contenir `{receveur}` : sinon, personne ne saurait à qui offrir.
+- Un aperçu du message utilise des noms fictifs (Alice offre à Bob), jamais le vrai tirage.
+- Un émoji, des guillemets « » ou certains accents (ê, ç, ë…) font passer le SMS en encodage Unicode, limité à 70 caractères par segment au lieu de 160. L'app affiche le nombre de SMS estimé par participant, calculé avec le plus long nom des participants, et les caractères qui imposent l'Unicode.
 
 ### 5.8 Partager l'app
 
@@ -168,17 +171,17 @@ La fiche personne est faite (étape 2). Le bouton « Voir pour XX » viendra ave
 
 ## 6. Écrans
 
-L'écran d'accueil a trois onglets : **Tirages**, **Groupes**, **Personnes**. Sa barre du haut porte un bouton **Partager**.
+L'écran d'accueil a trois onglets : **Tirages**, **Groupes**, **Personnes**. Sa barre du haut porte les boutons **Partager** et **Réglages**.
 
-1. **Tirages** : liste des tirages, du plus récent au plus ancien, avec groupe, date et état (*brouillon*, *tiré*, *envoyé*, *révélé*). Bouton « Nouveau tirage ».
+1. **Tirages** : liste des tirages, du plus récent au plus ancien, avec groupe, date, nombre de participants et état (*brouillon*, *tiré*, *envoyé*, *révélé*). Bouton « Nouveau tirage ».
 2. **Groupes** : liste des groupes avec leur nombre de membres. Bouton « + ».
 3. **Personnes** : carnet, avec recherche par nom ou numéro. Bouton « Nouvelle personne », qui propose *Choisir dans les contacts* ou *Saisir à la main*.
 4. **Groupe** : membres, ajout depuis le carnet, depuis les contacts ou par saisie, exclusions, historique des tirages, bouton « Nouveau tirage ».
 5. **Exclusion** (création / modification) : type, personnes concernées, libellé.
 6. **Personne** (création / modification) : nom, case « Pas de téléphone », numéro, groupes dont elle est membre (cases à cocher). En création depuis les contacts, le sélecteur s'ouvre d'abord et pré-remplit le nom et le numéro.
-7. **Nouveau tirage** : groupe, participants à cocher, nom, date, budget, message avec aperçu et nombre de segments.
+7. **Nouveau tirage / Modifier le tirage** (brouillon) : groupe (au choix depuis l'onglet Tirages), nom, date, budget, participants à cocher avec l'alerte de faisabilité, message avec aperçu et nombre de SMS estimé. Suppression du brouillon.
 8. **Tirage** : état de chaque participant, bouton « Tirer au sort », puis « Envoyer les SMS », renvoi individuel, bouton « Voir pour XX » par participant sans téléphone (§5.9), menu « Révéler le tirage ».
-9. **Réglages** : modèle de message par défaut, SIM d'envoi par défaut.
+9. **Réglages** : modèle de message par défaut, version de l'app. (SIM d'envoi par défaut : étape 6.)
 10. **Partager** : QR code vers le dépôt GitHub, lien cliquable (§5.8).
 
 ## 7. Données
@@ -192,11 +195,13 @@ Stockage local SQLite.
 | `GroupMember` | groupId, personId |
 | `ExclusionRule` | id, groupId, type (couple, sens unique, foyer), label? |
 | `ExclusionMember` | ruleId, personId, role (donneur, receveur ou membre) |
-| `Draw` | id, groupId, name, date?, budget?, messageTemplate, status, allowReciprocal, revealed, createdAt |
-| `Participant` | drawId, personId?, name, phoneE164? (copie figée au tirage) |
+| `Draw` | id, groupId? (`null` si le groupe est supprimé), name, dateEpochDay?, budget?, messageTemplate, status (brouillon, tiré, envoyé), allowReciprocal, revealed, createdAt |
+| `Participant` | id, drawId, personId? (`null` si la personne est supprimée), name, phoneE164? : sélection en cours dans un brouillon, copie figée au tirage |
 | `Assignment` | drawId, giverParticipantId, receiverParticipantId, status (SMS ou *Vu*), smsError?, sentAt? |
 
 Les sauvegardes automatiques Android (`allowBackup`) sont désactivées : elles enverraient les tirages dans le cloud Google.
+
+Les réglages (message par défaut) sont stockés à part, dans les préférences de l'app sur le téléphone.
 
 ## 8. Choix techniques
 
@@ -235,7 +240,7 @@ Expo (React Native) a été écarté : `expo-sms` ne fait qu'ouvrir l'app SMS. L
 1. ✅ Projet Android vide, compilé et signé par GitHub Actions, qui s'installe sur le téléphone. Écran Partager et README d'installation.
 2. ✅ Personnes et groupes (stockage + écrans 2, 3, 4, 6), dont les personnes sans téléphone.
 3. ✅ Algorithme de tirage et tests unitaires.
-4. Exclusions (écran 5).
+4. ✅ Exclusions (écran 5).
 5. Création d'un tirage et modèle de message (écrans 7, 9).
 6. Envoi des SMS, suivi des états, historique (écrans 1, 8).
 7. Participants sans téléphone (§5.9) : bouton « Voir pour XX » avec compte à rebours sur l'écran Tirage.

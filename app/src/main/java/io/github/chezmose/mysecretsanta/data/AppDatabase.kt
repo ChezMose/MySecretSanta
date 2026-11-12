@@ -21,13 +21,16 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         GroupMember::class,
         ExclusionRule::class,
         ExclusionMember::class,
+        Draw::class,
+        Participant::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun personDao(): PersonDao
     abstract fun groupDao(): GroupDao
+    abstract fun drawDao(): DrawDao
 
     companion object {
         const val NAME = "mysecretsanta.db"
@@ -88,7 +91,43 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
-        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+        /** v3 → v4 : tirages et participants. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `draw` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`groupId` INTEGER, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`dateEpochDay` INTEGER, " +
+                        "`budget` TEXT, " +
+                        "`messageTemplate` TEXT NOT NULL, " +
+                        "`status` TEXT NOT NULL, " +
+                        "`allowReciprocal` INTEGER NOT NULL, " +
+                        "`revealed` INTEGER NOT NULL, " +
+                        "`createdAt` INTEGER NOT NULL, " +
+                        "FOREIGN KEY(`groupId`) REFERENCES `santa_group`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE SET NULL )",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_draw_groupId` ON `draw` (`groupId`)")
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `participant` (" +
+                        "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                        "`drawId` INTEGER NOT NULL, " +
+                        "`personId` INTEGER, " +
+                        "`name` TEXT NOT NULL, " +
+                        "`phoneE164` TEXT, " +
+                        "FOREIGN KEY(`drawId`) REFERENCES `draw`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                        "FOREIGN KEY(`personId`) REFERENCES `person`(`id`) " +
+                        "ON UPDATE NO ACTION ON DELETE SET NULL )",
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_participant_drawId` ON `participant` (`drawId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_participant_personId` ON `participant` (`personId`)")
+            }
+        }
+
+        val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
 
         fun build(context: Context, name: String = NAME): AppDatabase =
             Room.databaseBuilder(context, AppDatabase::class.java, name)

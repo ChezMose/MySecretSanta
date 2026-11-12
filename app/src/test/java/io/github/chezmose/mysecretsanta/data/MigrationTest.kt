@@ -41,7 +41,8 @@ class MigrationTest {
     private fun createVersion1(fill: SQLiteDatabase.() -> Unit) = createDatabase(1, fill)
 
     /**
-     * Schéma v1 ou v2 (app/schemas/…/2.json). Seule différence : le numéro devient facultatif en v2.
+     * Schéma v1, v2 ou v3 (app/schemas/…/<version>.json) : le numéro devient facultatif en v2,
+     * les exclusions arrivent en v3.
      */
     private fun createDatabase(version: Int, fill: SQLiteDatabase.() -> Unit) {
         val file = context.getDatabasePath(dbName)
@@ -64,9 +65,58 @@ class MigrationTest {
                 "FOREIGN KEY(`personId`) REFERENCES `person`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         )
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_group_member_personId` ON `group_member` (`personId`)")
+        if (version >= 3) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `exclusion_rule` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "`groupId` INTEGER NOT NULL, `type` TEXT NOT NULL, `label` TEXT, " +
+                    "FOREIGN KEY(`groupId`) REFERENCES `santa_group`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_exclusion_rule_groupId` ON `exclusion_rule` (`groupId`)")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `exclusion_member` (`ruleId` INTEGER NOT NULL, " +
+                    "`personId` INTEGER NOT NULL, `role` TEXT NOT NULL, PRIMARY KEY(`ruleId`, `personId`), " +
+                    "FOREIGN KEY(`ruleId`) REFERENCES `exclusion_rule`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                    "FOREIGN KEY(`personId`) REFERENCES `person`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            db.execSQL(
+                "CREATE INDEX IF NOT EXISTS `index_exclusion_member_personId` ON `exclusion_member` (`personId`)",
+            )
+        }
         db.fill()
         db.version = version
         db.close()
+    }
+
+    @Test
+    fun `migration 3 vers 4 conserve les données et ajoute les tirages`(): Unit = runBlocking {
+        createDatabase(3) {
+            execSQL("INSERT INTO person (id, name, phoneE164) VALUES (1, 'Alice', '+33611111111')")
+            execSQL("INSERT INTO person (id, name, phoneE164) VALUES (2, 'Bob', NULL)")
+            execSQL("INSERT INTO person (id, name, phoneE164) VALUES (3, 'Chloé', '+33633333333')")
+            execSQL("INSERT INTO santa_group (id, name) VALUES (10, 'Famille')")
+            execSQL("INSERT INTO group_member (groupId, personId) VALUES (10, 1)")
+            execSQL("INSERT INTO group_member (groupId, personId) VALUES (10, 2)")
+            execSQL("INSERT INTO group_member (groupId, personId) VALUES (10, 3)")
+            execSQL("INSERT INTO exclusion_rule (id, groupId, type, label) VALUES (5, 10, 'COUPLE', 'Mariés')")
+            execSQL("INSERT INTO exclusion_member (ruleId, personId, role) VALUES (5, 1, 'MEMBER')")
+            execSQL("INSERT INTO exclusion_member (ruleId, personId, role) VALUES (5, 2, 'MEMBER')")
+        }
+
+        val db = openCurrent()
+
+        assertEquals(3, db.personDao().observeAll().first().size)
+        assertEquals(3, db.groupDao().observeSummaries().first().single().memberCount)
+        val exclusion = db.groupDao().getExclusion(5)!!
+        assertEquals(ExclusionType.COUPLE, exclusion.rule.type)
+        assertEquals("Mariés", exclusion.rule.label)
+        assertEquals(setOf(1L, 2L), exclusion.members.map { it.personId }.toSet())
+
+        val drawId = db.drawDao().saveDraft(
+            Draw(groupId = 10, name = "Noël", dateEpochDay = null, budget = null, messageTemplate = "{receveur}", createdAt = 1),
+            listOf(Participant(drawId = 0, personId = 1, name = "Alice", phoneE164 = "+33611111111")),
+        )
+        assertEquals("Noël", db.drawDao().observeSummaries().first().single().name)
+        assertEquals(1, db.drawDao().participants(drawId).size)
     }
 
     @Test

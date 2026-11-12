@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -36,8 +37,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.chezmose.mysecretsanta.ui.common.EmptyState
 import io.github.chezmose.mysecretsanta.ui.common.NameDialog
+import io.github.chezmose.mysecretsanta.ui.draws.DrawsTab
+import io.github.chezmose.mysecretsanta.ui.draws.DrawsViewModel
 import io.github.chezmose.mysecretsanta.ui.groups.GroupsTab
 import io.github.chezmose.mysecretsanta.ui.groups.GroupsViewModel
 import io.github.chezmose.mysecretsanta.ui.people.PeopleTab
@@ -52,8 +54,10 @@ private enum class HomeTab(val label: String, val icon: ImageVector) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    version: String,
     onShare: () -> Unit,
+    onSettings: () -> Unit,
+    onOpenDraw: (Long) -> Unit,
+    onNewDraw: () -> Unit,
     onOpenGroup: (Long) -> Unit,
     onOpenPerson: (Long) -> Unit,
     onNewPerson: (fromContacts: Boolean) -> Unit,
@@ -61,6 +65,7 @@ fun HomeScreen(
     var tab by rememberSaveable { mutableStateOf(HomeTab.Draws) }
     var showNewGroup by rememberSaveable { mutableStateOf(false) }
     var showNewPersonChoice by rememberSaveable { mutableStateOf(false) }
+    val drawsVm: DrawsViewModel = viewModel(factory = DrawsViewModel.Factory)
     val groupsVm: GroupsViewModel = viewModel(factory = GroupsViewModel.Factory)
     val peopleVm: PeopleViewModel = viewModel(factory = PeopleViewModel.Factory)
 
@@ -71,6 +76,9 @@ fun HomeScreen(
                 actions = {
                     IconButton(onClick = onShare) {
                         Icon(Icons.Filled.Share, contentDescription = "Partager")
+                    }
+                    IconButton(onClick = onSettings) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Réglages")
                     }
                 },
             )
@@ -99,19 +107,17 @@ fun HomeScreen(
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
                     text = { Text("Nouvelle personne") },
                 )
-                HomeTab.Draws -> Unit
+                HomeTab.Draws -> ExtendedFloatingActionButton(
+                    onClick = onNewDraw,
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    text = { Text("Nouveau tirage") },
+                )
             }
         },
     ) { innerPadding ->
         Box(Modifier.fillMaxSize().padding(innerPadding)) {
             when (tab) {
-                HomeTab.Draws -> EmptyState(
-                    icon = Icons.Filled.Star,
-                    title = "Les tirages arrivent bientôt",
-                    message = "Le tirage au sort arrivera dans une prochaine version. " +
-                        "En attendant, enregistre les personnes et réunis-les en groupes.\n\n" +
-                        "Version $version",
-                )
+                HomeTab.Draws -> DrawsTab(vm = drawsVm, onOpenDraw = onOpenDraw)
                 HomeTab.Groups -> GroupsTab(vm = groupsVm, onOpenGroup = onOpenGroup)
                 HomeTab.People -> PeopleTab(vm = peopleVm, onOpenPerson = onOpenPerson)
             }

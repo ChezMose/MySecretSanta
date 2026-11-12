@@ -21,6 +21,15 @@ private const val DELETE_EXCLUSION_MEMBERS_OUTSIDE_GROUP =
         "SELECT 1 FROM exclusion_rule r INNER JOIN group_member m ON m.groupId = r.groupId " +
         "WHERE r.id = exclusion_member.ruleId AND m.personId = exclusion_member.personId)"
 
+/**
+ * Retire des tirages en brouillon les participants qui ne sont plus membres du groupe du tirage
+ * (ou dont la personne a été supprimée). Les tirages faits gardent leurs participants figés.
+ */
+private const val DELETE_DRAFT_PARTICIPANTS_OUTSIDE_GROUP =
+    "DELETE FROM participant WHERE drawId IN (SELECT id FROM draw WHERE status = 'DRAFT') " +
+        "AND NOT EXISTS (SELECT 1 FROM draw d INNER JOIN group_member m ON m.groupId = d.groupId " +
+        "WHERE d.id = participant.drawId AND m.personId = participant.personId)"
+
 @Dao
 abstract class PersonDao {
     @Query("SELECT * FROM person")
@@ -44,11 +53,18 @@ abstract class PersonDao {
     @Query(DELETE_INCOMPLETE_EXCLUSIONS)
     abstract suspend fun deleteIncompleteExclusions()
 
-    /** Supprime la personne, ses appartenances aux groupes et les exclusions devenues incomplètes. */
+    @Query(DELETE_DRAFT_PARTICIPANTS_OUTSIDE_GROUP)
+    abstract suspend fun deleteDraftParticipantsOutsideGroup()
+
+    /**
+     * Supprime la personne, ses appartenances aux groupes, les exclusions devenues incomplètes
+     * et sa place dans les brouillons. Les tirages faits gardent son nom.
+     */
     @Transaction
     open suspend fun delete(id: Long) {
         deletePersonRow(id)
         deleteIncompleteExclusions()
+        deleteDraftParticipantsOutsideGroup()
     }
 }
 
@@ -76,9 +92,21 @@ abstract class GroupDao {
     @Query("UPDATE santa_group SET name = :name WHERE id = :id")
     abstract suspend fun rename(id: Long, name: String)
 
-    /** Supprime le groupe, ses appartenances et ses exclusions (clés étrangères en cascade). */
     @Query("DELETE FROM santa_group WHERE id = :id")
-    abstract suspend fun delete(id: Long)
+    abstract suspend fun deleteGroupRow(id: Long)
+
+    @Query("DELETE FROM draw WHERE groupId = :groupId AND status = 'DRAFT'")
+    abstract suspend fun deleteDraftDraws(groupId: Long)
+
+    /**
+     * Supprime le groupe, ses appartenances, ses exclusions et ses brouillons.
+     * Ses tirages faits restent dans l'historique, sans groupe.
+     */
+    @Transaction
+    open suspend fun delete(id: Long) {
+        deleteDraftDraws(id)
+        deleteGroupRow(id)
+    }
 
     /** Crée une copie du groupe avec les mêmes membres et exclusions, et renvoie son identifiant. */
     @Transaction
@@ -122,7 +150,7 @@ abstract class GroupDao {
     @Transaction
     open suspend fun removeMember(groupId: Long, personId: Long) {
         deleteMembership(groupId, personId)
-        cleanUpExclusions()
+        cleanUpAfterMembershipChange()
     }
 
     /** Remplace la liste des groupes dont la personne est membre. */
@@ -130,7 +158,7 @@ abstract class GroupDao {
     open suspend fun setMemberships(personId: Long, groupIds: Collection<Long>) {
         clearMemberships(personId)
         addMembers(groupIds.map { GroupMember(groupId = it, personId = personId) })
-        cleanUpExclusions()
+        cleanUpAfterMembershipChange()
     }
 
     // --- Exclusions ---
@@ -182,13 +210,65 @@ abstract class GroupDao {
     @Query(DELETE_INCOMPLETE_EXCLUSIONS)
     abstract suspend fun deleteIncompleteExclusions()
 
+    @Query(DELETE_DRAFT_PARTICIPANTS_OUTSIDE_GROUP)
+    abstract suspend fun deleteDraftParticipantsOutsideGroup()
+
     /**
-     * Garde les exclusions cohérentes avec les groupes : une personne qui n'est plus membre du groupe
-     * en est retirée, et une exclusion qui ne concerne plus au moins 2 personnes est supprimée.
+     * Garde les exclusions et les brouillons cohérents avec les groupes : une personne qui n'est plus
+     * membre du groupe est retirée de ses exclusions et de ses brouillons, et une exclusion qui ne
+     * concerne plus au moins 2 personnes est supprimée.
      */
     @Transaction
-    open suspend fun cleanUpExclusions() {
+    open suspend fun cleanUpAfterMembershipChange() {
         deleteExclusionMembersOutsideGroup()
         deleteIncompleteExclusions()
+        deleteDraftParticipantsOutsideGroup()
+    }
+}
+
+@Dao
+abstract class DrawDao {
+    @Query(
+        "SELECT d.id AS id, d.name AS name, d.dateEpochDay AS dateEpochDay, d.status AS status, " +
+            "g.name AS groupName, " +
+            "(SELECT COUNT(*) FROM participant p WHERE p.drawId = d.id) AS participantCount " +
+            "FROM draw d LEFT JOIN santa_group g ON g.id = d.groupId " +
+            "ORDER BY d.createdAt DESC, d.id DESC",
+    )
+    abstract fun observeSummaries(): Flow<List<DrawSummary>>
+
+    @Query("SELECT * FROM draw WHERE id = :id")
+    abstract suspend fun get(id: Long): Draw?
+
+    @Query("SELECT * FROM participant WHERE drawId = :drawId")
+    abstract suspend fun participants(drawId: Long): List<Participant>
+
+    @Insert
+    abstract suspend fun insertDraw(draw: Draw): Long
+
+    @Update
+    abstract suspend fun updateDraw(draw: Draw)
+
+    @Query("DELETE FROM draw WHERE id = :id")
+    abstract suspend fun delete(id: Long)
+
+    @Insert
+    abstract suspend fun insertParticipants(participants: List<Participant>)
+
+    @Query("DELETE FROM participant WHERE drawId = :drawId")
+    abstract suspend fun clearParticipants(drawId: Long)
+
+    /** Crée ou modifie un brouillon et remplace ses participants. Renvoie son identifiant. */
+    @Transaction
+    open suspend fun saveDraft(draw: Draw, participants: List<Participant>): Long {
+        val drawId = if (draw.id == 0L) {
+            insertDraw(draw)
+        } else {
+            updateDraw(draw)
+            draw.id
+        }
+        clearParticipants(drawId)
+        insertParticipants(participants.map { it.copy(id = 0, drawId = drawId) })
+        return drawId
     }
 }

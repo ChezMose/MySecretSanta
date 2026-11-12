@@ -130,6 +130,90 @@ data class ExclusionWithMembers(
     val members: List<ExclusionMember>,
 )
 
+/** État d'un tirage. Stocké en texte : ne jamais renommer une valeur. */
+enum class DrawStatus {
+    /** En préparation : participants, message… modifiables. */
+    DRAFT,
+
+    /** Tiré au sort, résultats pas encore tous transmis. */
+    DRAWN,
+
+    /** Tous les résultats ont été transmis. */
+    SENT,
+}
+
+/**
+ * Un tirage (SPEC.md §5.4). Supprimer son groupe ne le supprime pas (historique) :
+ * `groupId` devient `null`. Les brouillons, eux, sont supprimés avec le groupe.
+ */
+@Entity(
+    tableName = "draw",
+    foreignKeys = [
+        ForeignKey(
+            entity = SantaGroup::class,
+            parentColumns = ["id"],
+            childColumns = ["groupId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
+    ],
+    indices = [Index(value = ["groupId"])],
+)
+data class Draw(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val groupId: Long?,
+    val name: String,
+    /** Date de l'échange, en jours depuis le 1er janvier 1970 (`LocalDate.toEpochDay()`). */
+    val dateEpochDay: Long?,
+    val budget: String?,
+    val messageTemplate: String,
+    val status: DrawStatus = DrawStatus.DRAFT,
+    val allowReciprocal: Boolean = false,
+    val revealed: Boolean = false,
+    /** Création, en millisecondes depuis 1970. */
+    val createdAt: Long,
+)
+
+/**
+ * Un participant d'un tirage, avec une copie de son nom et de son numéro.
+ * Dans un brouillon, c'est la sélection en cours ; au tirage, la copie est figée.
+ * Supprimer la personne ne supprime pas le participant d'un tirage fait : `personId` devient `null`.
+ */
+@Entity(
+    tableName = "participant",
+    foreignKeys = [
+        ForeignKey(
+            entity = Draw::class,
+            parentColumns = ["id"],
+            childColumns = ["drawId"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+        ForeignKey(
+            entity = Person::class,
+            parentColumns = ["id"],
+            childColumns = ["personId"],
+            onDelete = ForeignKey.SET_NULL,
+        ),
+    ],
+    indices = [Index(value = ["drawId"]), Index(value = ["personId"])],
+)
+data class Participant(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val drawId: Long,
+    val personId: Long?,
+    val name: String,
+    val phoneE164: String?,
+)
+
+/** Un tirage pour la liste des tirages. */
+data class DrawSummary(
+    val id: Long,
+    val name: String,
+    val dateEpochDay: Long?,
+    val status: DrawStatus,
+    val groupName: String?,
+    val participantCount: Int,
+)
+
 /** Un groupe avec son nombre de membres, pour la liste des groupes. */
 data class GroupSummary(
     val id: Long,
