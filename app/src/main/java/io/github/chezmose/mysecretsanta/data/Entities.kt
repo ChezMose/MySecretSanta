@@ -162,7 +162,10 @@ data class Draw(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val groupId: Long?,
     val name: String,
-    /** Date de l'échange, en jours depuis le 1er janvier 1970 (`LocalDate.toEpochDay()`). */
+    /**
+     * Inutilisée : la date de l'échange a été retirée (SPEC.md §5.4). Toujours `null` pour les
+     * nouveaux tirages ; la colonne reste pour éviter une migration.
+     */
     val dateEpochDay: Long?,
     val budget: String?,
     val messageTemplate: String,

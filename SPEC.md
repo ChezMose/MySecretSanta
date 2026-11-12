@@ -36,7 +36,7 @@ Seul l'organisateur installe l'application. Les participants reçoivent un simpl
 | **Personne** | Une entrée du carnet de l'app : nom et numéro de mobile, ou aucun numéro pour une personne sans téléphone (§5.9). Une personne peut appartenir à plusieurs groupes. |
 | **Groupe** | Un ensemble de personnes qui font régulièrement un tirage ensemble, avec ses exclusions. Il est enregistré et réutilisé d'une année sur l'autre. |
 | **Exclusion** | Une règle d'un groupe qui interdit certaines attributions, par exemple dans un couple. |
-| **Tirage** | Un échange de cadeaux précis, créé à partir d'un groupe : « Noël 2026 », avec sa date, son budget, son message et ses participants. |
+| **Tirage** | Un échange de cadeaux précis, créé à partir d'un groupe : « Noël 2026 », avec son budget, son message et ses participants. |
 
 ## 5. Fonctionnalités
 
@@ -78,7 +78,7 @@ Les exclusions appartiennent à un groupe et s'appliquent à chacun de ses tirag
 
 **Création :**
 
-- Créer un tirage à partir d'un groupe, depuis l'onglet Tirages (choix du groupe) ou depuis la fiche du groupe : nom (obligatoire, « Noël <année> » proposé), date de l'échange (facultative, calendrier), budget (facultatif, texte libre, ex. « 30 € »).
+- Créer un tirage à partir d'un groupe, depuis l'onglet Tirages (choix du groupe) ou depuis la fiche du groupe : nom (obligatoire, « Noël <année> » proposé), budget (facultatif, texte libre, ex. « 30 € »). Pas de date de l'échange.
 - Par défaut tous les membres du groupe participent. On peut décocher les absents pour ce tirage.
 - Minimum 3 participants. La faisabilité (§5.3) est vérifiée en direct avec les participants cochés.
 - Un tirage reste en **brouillon** tant qu'il n'est pas tiré : tout y reste modifiable, et il peut être supprimé.
@@ -114,7 +114,7 @@ Les tests ([SecretSantaTest.kt](app/src/test/java/io/github/chezmose/mysecretsan
 L'organisateur participe souvent au tirage. Il ne doit donc pas voir les résultats.
 
 - Après le tirage, l'écran n'affiche que l'état d'envoi de chaque participant (§5.6), jamais à qui il offre.
-- Le tirage est conservé, même après la date de l'échange. Il sert à renvoyer un SMS, sans l'afficher, et à garder l'historique.
+- Le tirage est conservé, même une fois l'échange passé. Il sert à renvoyer un SMS, sans l'afficher, et à garder l'historique.
 - Une action « Révéler le tirage », derrière une double confirmation, permet de le consulter. L'app enregistre que le tirage a été révélé et l'indique.
 
 **Limite connue :** quand une app qui n'est pas l'app SMS par défaut envoie un SMS, Android le copie dans l'historique de l'app SMS du téléphone. Les messages envoyés apparaissent donc dans les conversations de l'organisateur. L'app ne peut pas l'empêcher. Il faut le signaler à l'utilisateur avant l'envoi, avec le conseil de ne pas ouvrir ces conversations, ou de les supprimer.
@@ -131,14 +131,18 @@ L'organisateur participe souvent au tirage. Il ne doit donc pas voir les résult
 
 ### 5.7 Message
 
+**Un seul SMS par participant, toujours.** Le message n'utilise que l'alphabet SMS standard (GSM), qui permet 160 caractères par SMS ; un seul caractère hors de cet alphabet ferait passer le SMS en Unicode, limité à 70 caractères.
+
 Un modèle par défaut, modifiable dans les réglages, est copié dans chaque nouveau tirage, où on peut l'adapter :
 
-> 🎅 Bonjour {donneur} ! Pour « {tirage} », tu offres un cadeau à **{receveur}**. Budget : {budget}. Rendez-vous le {date}. Chut, c'est secret !
+> Bonjour {donneur}, pour {tirage}, tu offres un cadeau à {receveur}.
+> Ne réponds pas à ce message ! C'est un secret pour moi aussi.
 
-- Variables : `{donneur}`, `{receveur}`, `{tirage}`, `{budget}`, `{date}`. Une variable dont le champ est vide est retirée avec sa phrase. La date s'écrit en toutes lettres : « jeudi 24 décembre ».
+- Variables : `{donneur}`, `{receveur}`, `{tirage}`, `{budget}`. Une variable dont le champ est vide (budget absent) est retirée avec sa phrase. Les retours à la ligne du modèle sont conservés.
 - Le message doit contenir `{receveur}` : sinon, personne ne saurait à qui offrir.
+- **Caractères interdits** : la saisie du modèle est convertie au fil de l'eau (ê → e, ç → c, « » → ", émojis retirés). Les noms et le nom du tirage sont convertis de la même façon à l'envoi : « Noël » devient « Noel ».
+- **Longueur** : l'app affiche la longueur du message avec le plus long nom des participants (« 137 / 160 caractères »), et refuse d'enregistrer un message qui dépasse 160 caractères. Dans les réglages, la vérification se fait avec un nom d'exemple (« Jean-Baptiste ») ; chaque tirage revérifie avec ses vrais participants.
 - Un aperçu du message utilise des noms fictifs (Alice offre à Bob), jamais le vrai tirage.
-- Un émoji, des guillemets « » ou certains accents (ê, ç, ë…) font passer le SMS en encodage Unicode, limité à 70 caractères par segment au lieu de 160. L'app affiche le nombre de SMS estimé par participant, calculé avec le plus long nom des participants, et les caractères qui imposent l'Unicode.
 
 ### 5.8 Partager l'app
 
@@ -173,13 +177,13 @@ La fiche personne est faite (étape 2). Le bouton « Voir pour XX » viendra ave
 
 L'écran d'accueil a trois onglets : **Tirages**, **Groupes**, **Personnes**. Sa barre du haut porte les boutons **Partager** et **Réglages**.
 
-1. **Tirages** : liste des tirages, du plus récent au plus ancien, avec groupe, date, nombre de participants et état (*brouillon*, *tiré*, *envoyé*, *révélé*). Bouton « Nouveau tirage ».
+1. **Tirages** : liste des tirages, du plus récent au plus ancien, avec groupe, nombre de participants et état (*brouillon*, *tiré*, *envoyé*, *révélé*). Bouton « Nouveau tirage ».
 2. **Groupes** : liste des groupes avec leur nombre de membres. Bouton « + ».
 3. **Personnes** : carnet, avec recherche par nom ou numéro. Bouton « Nouvelle personne », qui propose *Choisir dans les contacts* ou *Saisir à la main*.
 4. **Groupe** : membres, ajout depuis le carnet, depuis les contacts ou par saisie, exclusions, historique des tirages, bouton « Nouveau tirage ».
 5. **Exclusion** (création / modification) : type, personnes concernées, libellé.
 6. **Personne** (création / modification) : nom, case « Pas de téléphone », numéro, groupes dont elle est membre (cases à cocher). En création depuis les contacts, le sélecteur s'ouvre d'abord et pré-remplit le nom et le numéro.
-7. **Nouveau tirage / Modifier le tirage** (brouillon) : groupe (au choix depuis l'onglet Tirages), nom, date, budget, participants à cocher avec l'alerte de faisabilité, message avec aperçu et nombre de SMS estimé. Suppression du brouillon.
+7. **Nouveau tirage / Modifier le tirage** (brouillon) : groupe (au choix depuis l'onglet Tirages), nom, budget, participants à cocher avec l'alerte de faisabilité, message avec aperçu et longueur (un seul SMS). Suppression du brouillon.
 8. **Tirage** : état de chaque participant, bouton « Tirer au sort », puis « Envoyer les SMS », renvoi individuel, bouton « Voir pour XX » par participant sans téléphone (§5.9), menu « Révéler le tirage ».
 9. **Réglages** : modèle de message par défaut, version de l'app. (SIM d'envoi par défaut : étape 6.)
 10. **Partager** : QR code vers le dépôt GitHub, lien cliquable (§5.8).
@@ -195,7 +199,7 @@ Stockage local SQLite.
 | `GroupMember` | groupId, personId |
 | `ExclusionRule` | id, groupId, type (couple, sens unique, foyer), label? |
 | `ExclusionMember` | ruleId, personId, role (donneur, receveur ou membre) |
-| `Draw` | id, groupId? (`null` si le groupe est supprimé), name, dateEpochDay?, budget?, messageTemplate, status (brouillon, tiré, envoyé), allowReciprocal, revealed, createdAt |
+| `Draw` | id, groupId? (`null` si le groupe est supprimé), name, dateEpochDay? (inutilisée depuis le retrait de la date), budget?, messageTemplate, status (brouillon, tiré, envoyé), allowReciprocal, revealed, createdAt |
 | `Participant` | id, drawId, personId? (`null` si la personne est supprimée), name, phoneE164? : sélection en cours dans un brouillon, copie figée au tirage |
 | `Assignment` | drawId, giverParticipantId, receiverParticipantId, status (SMS ou *Vu*), smsError?, sentAt? |
 

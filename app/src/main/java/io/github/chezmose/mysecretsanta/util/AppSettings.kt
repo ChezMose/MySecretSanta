@@ -16,6 +16,7 @@ class AppSettings(context: Context) {
         }
 
     private companion object {
-        const val KEY_TEMPLATE = "default_message_template"
+        // « _v2 » : les modèles enregistrés avant le passage à un seul SMS sans date sont ignorés.
+        const val KEY_TEMPLATE = "default_message_template_v2"
     }
 }

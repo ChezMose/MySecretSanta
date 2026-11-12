@@ -2,42 +2,32 @@ package io.github.chezmose.mysecretsanta.ui.draws
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
@@ -50,10 +40,6 @@ import io.github.chezmose.mysecretsanta.ui.common.CheckboxRow
 import io.github.chezmose.mysecretsanta.ui.common.ConfirmDeleteDialog
 import io.github.chezmose.mysecretsanta.ui.common.MessageEditor
 import io.github.chezmose.mysecretsanta.ui.common.RadioRow
-import io.github.chezmose.mysecretsanta.util.formatLongDate
-import java.time.LocalDate
-
-private const val MILLIS_PER_DAY = 86_400_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,7 +51,6 @@ fun DrawEditScreen(
     val groups by vm.groups.collectAsStateWithLifecycle()
     val members by vm.members.collectAsStateWithLifecycle()
     val feasibility by vm.feasibility.collectAsStateWithLifecycle()
-    var showDatePicker by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
@@ -122,7 +107,7 @@ fun DrawEditScreen(
                 )
             }
 
-            // --- Nom, date, budget ---
+            // --- Nom, budget ---
             OutlinedTextField(
                 value = vm.name,
                 onValueChange = vm::onNameChange,
@@ -133,18 +118,6 @@ fun DrawEditScreen(
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.DateRange, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(vm.date?.let { formatLongDate(it, withYear = true) } ?: "Date de l'échange (facultative)")
-                }
-                if (vm.date != null) {
-                    IconButton(onClick = { vm.onDateChange(null) }) {
-                        Icon(Icons.Filled.Clear, contentDescription = "Retirer la date")
-                    }
-                }
-            }
             OutlinedTextField(
                 value = vm.budget,
                 onValueChange = vm::onBudgetChange,
@@ -197,8 +170,7 @@ fun DrawEditScreen(
                 defaultTemplate = vm.defaultTemplate,
                 drawName = vm.name,
                 budget = vm.budget,
-                date = vm.date,
-                longestName = memberList.filter { it.id in vm.selected }.maxByOrNull { it.name.length }?.name ?: "Alice",
+                longestName = vm.longestName(memberList),
                 error = vm.templateError,
             )
 
@@ -210,26 +182,6 @@ fun DrawEditScreen(
             ) {
                 Text("Enregistrer")
             }
-        }
-    }
-
-    if (showDatePicker) {
-        val state = rememberDatePickerState(initialSelectedDateMillis = vm.date?.toEpochDay()?.times(MILLIS_PER_DAY))
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        state.selectedDateMillis?.let { vm.onDateChange(LocalDate.ofEpochDay(it / MILLIS_PER_DAY)) }
-                        showDatePicker = false
-                    },
-                ) { Text("OK") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) { Text("Annuler") }
-            },
-        ) {
-            DatePicker(state = state)
         }
     }
 

@@ -15,14 +15,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
+import io.github.chezmose.mysecretsanta.message.Gsm
 import io.github.chezmose.mysecretsanta.message.MessageTemplate
-import io.github.chezmose.mysecretsanta.message.SmsSegments
-import java.time.LocalDate
 
 /**
  * Édition du modèle de message, avec un aperçu sur des noms fictifs (jamais le vrai tirage)
- * et le nombre de SMS estimé.
- * @param longestName le plus long nom de participant, pour estimer le pire cas.
+ * et la longueur du message le plus long. La saisie est convertie en alphabet SMS au fil de l'eau
+ * (ê → e, émojis retirés) : le message tient toujours en un seul SMS.
+ * @param longestName le plus long nom de participant, pour calculer le pire cas.
  */
 @Composable
 fun MessageEditor(
@@ -31,14 +31,13 @@ fun MessageEditor(
     defaultTemplate: String,
     drawName: String,
     budget: String?,
-    date: LocalDate?,
     longestName: String,
     error: String?,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             value = template,
-            onValueChange = onTemplateChange,
+            onValueChange = { onTemplateChange(Gsm.sanitize(it)) },
             label = { Text("Message") },
             isError = error != null,
             supportingText = {
@@ -64,27 +63,24 @@ fun MessageEditor(
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                MessageTemplate.render(template, "Alice", "Bob", name, budget, date),
+                MessageTemplate.render(template, "Alice", "Bob", name, budget),
                 modifier = Modifier.padding(12.dp),
             )
         }
 
-        val worstCase = MessageTemplate.render(template, longestName, longestName, name, budget, date)
+        val length = Gsm.length(MessageTemplate.render(template, longestName, longestName, name, budget))
+        val tooLong = length > MessageTemplate.MAX_LENGTH
         Text(
-            smsCountLabel(SmsSegments.estimate(worstCase)),
+            "$length / ${MessageTemplate.MAX_LENGTH} caractères avec le nom le plus long ($longestName)" +
+                if (tooLong) " : trop long pour un seul SMS." else ", soit 1 SMS par participant.",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (tooLong) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            "Les émojis et accents spéciaux (ê, ç, « »…) sont remplacés ou retirés, " +
+                "y compris dans les noms : « Noël » devient « Noel ».",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
-}
-
-private fun smsCountLabel(estimate: SmsSegments.Estimate): String {
-    val count = if (estimate.segments <= 1) {
-        "1 SMS par participant"
-    } else {
-        "Jusqu'à ${estimate.segments} SMS par participant"
-    }
-    if (!estimate.unicode) return "$count."
-    val chars = estimate.unicodeCharacters.take(5).joinToString(" ")
-    return "$count. Message en Unicode (70 caractères par SMS au lieu de 160), à cause de : $chars"
 }

@@ -33,7 +33,13 @@ import androidx.compose.ui.unit.dp
 import io.github.chezmose.mysecretsanta.SantaApp
 import io.github.chezmose.mysecretsanta.message.MessageTemplate
 import io.github.chezmose.mysecretsanta.ui.common.MessageEditor
-import io.github.chezmose.mysecretsanta.util.nextChristmasEve
+import java.time.LocalDate
+
+/**
+ * Nom d'exemple pour vérifier la longueur du message par défaut. Chaque tirage revérifie
+ * avec le plus long nom de ses vrais participants.
+ */
+private const val SAMPLE_LONG_NAME = "Jean-Baptiste"
 
 /** Réglages (écran 9) : message par défaut des nouveaux tirages, version de l'app. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,7 +48,7 @@ fun SettingsScreen(version: String, onBack: () -> Unit) {
     val settings = (LocalContext.current.applicationContext as SantaApp).settings
     var template by rememberSaveable { mutableStateOf(settings.defaultMessageTemplate) }
     var error by remember { mutableStateOf<String?>(null) }
-    val exampleDate = remember { nextChristmasEve() }
+    val exampleDrawName = remember { "Noël ${LocalDate.now().year}" }
 
     Scaffold(
         topBar = {
@@ -79,16 +85,16 @@ fun SettingsScreen(version: String, onBack: () -> Unit) {
                     error = null
                 },
                 defaultTemplate = MessageTemplate.DEFAULT,
-                drawName = "Noël ${exampleDate.year}",
+                drawName = exampleDrawName,
                 budget = "30 €",
-                date = exampleDate,
-                longestName = "Alice",
+                longestName = SAMPLE_LONG_NAME,
                 error = error,
             )
             Spacer(Modifier.height(8.dp))
             Button(
                 onClick = {
                     error = MessageTemplate.validate(template)
+                        ?: MessageTemplate.checkLength(template, SAMPLE_LONG_NAME, exampleDrawName, "30 €")
                     if (error == null) {
                         settings.defaultMessageTemplate = template
                         onBack()

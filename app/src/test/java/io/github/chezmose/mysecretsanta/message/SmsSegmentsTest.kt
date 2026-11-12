@@ -50,12 +50,4 @@ class SmsSegmentsTest {
             SmsSegments.estimate("🎅 Pour « Noel », 🎅 « » !").unicodeCharacters,
         )
     }
-
-    @Test
-    fun `message par défaut, en Unicode`() {
-        val text = MessageTemplate.render(MessageTemplate.DEFAULT, "Alice", "Bob", "Noël 2026", "30 €", null)
-        val estimate = SmsSegments.estimate(text)
-        assertTrue(estimate.unicode)
-        assertEquals(2, estimate.segments)
-    }
 }

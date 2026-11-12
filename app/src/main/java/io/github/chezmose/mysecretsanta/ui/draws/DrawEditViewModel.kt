@@ -63,8 +63,6 @@ class DrawEditViewModel(
         private set
     var name by mutableStateOf("Noël ${LocalDate.now().year}")
         private set
-    var date by mutableStateOf<LocalDate?>(null)
-        private set
     var budget by mutableStateOf("")
         private set
     var template by mutableStateOf(defaultTemplate)
@@ -117,7 +115,6 @@ class DrawEditViewModel(
                 val draw = db.drawDao().get(drawId) ?: return@launch
                 loadedDraw = draw
                 name = draw.name
-                date = draw.dateEpochDay?.let(LocalDate::ofEpochDay)
                 budget = draw.budget.orEmpty()
                 template = draw.messageTemplate
                 savedSelection = db.drawDao().participants(drawId).mapNotNull { it.personId }.toSet()
@@ -144,9 +141,9 @@ class DrawEditViewModel(
         nameError = null
     }
 
-    fun onDateChange(value: LocalDate?) {
-        date = value
-    }
+    /** Le plus long nom parmi les participants cochés, pour vérifier que le message tient en un SMS. */
+    fun longestName(members: List<Person>): String =
+        members.filter { it.id in selected }.maxByOrNull { it.name.length }?.name ?: "Alice"
 
     fun onBudgetChange(value: String) {
         budget = value
@@ -165,9 +162,10 @@ class DrawEditViewModel(
         if (saving) return
         nameError = if (name.isBlank()) "Le nom du tirage est obligatoire." else null
         groupError = if (groupId == null) "Choisis un groupe." else null
-        templateError = MessageTemplate.validate(template)
         val currentGroup = groupId
         val currentMembers = members.value
+        templateError = MessageTemplate.validate(template)
+            ?: MessageTemplate.checkLength(template, longestName(currentMembers.orEmpty()), name, budget)
         if (nameError != null || groupError != null || templateError != null) return
         if (currentGroup == null || currentMembers == null) return
 
@@ -178,7 +176,7 @@ class DrawEditViewModel(
             .copy(
                 groupId = currentGroup,
                 name = name.trim(),
-                dateEpochDay = date?.toEpochDay(),
+                dateEpochDay = null, // La date de l'échange a été retirée (SPEC.md §5.4).
                 budget = budget.trim().ifEmpty { null },
                 messageTemplate = template,
             )

@@ -19,8 +19,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.chezmose.mysecretsanta.data.DrawStatus
 import io.github.chezmose.mysecretsanta.ui.common.EmptyState
-import io.github.chezmose.mysecretsanta.util.formatShortDate
-import java.time.LocalDate
 
 val DrawStatus.label: String
     get() = when (this) {
@@ -41,7 +39,7 @@ fun DrawsTab(vm: DrawsViewModel, onOpenDraw: (Long) -> Unit) {
             icon = Icons.Filled.Star,
             title = "Aucun tirage",
             message = "Crée un tirage à partir d'un groupe : choisis les participants, " +
-                "la date, le budget et le message envoyé à chacun.",
+                "le budget et le message envoyé à chacun.",
         )
         return
     }
@@ -57,7 +55,6 @@ fun DrawsTab(vm: DrawsViewModel, onOpenDraw: (Long) -> Unit) {
                     Text(
                         listOfNotNull(
                             draw.groupName ?: "Groupe supprimé",
-                            draw.dateEpochDay?.let { formatShortDate(LocalDate.ofEpochDay(it)) },
                             participantsLabel(draw.participantCount),
                         ).joinToString(" · "),
                     )
