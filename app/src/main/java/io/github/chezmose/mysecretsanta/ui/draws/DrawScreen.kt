@@ -287,8 +287,11 @@ fun DrawScreen(
             title = { Text("Autorisation nécessaire") },
             text = {
                 Text(
-                    "Pour envoyer à chacun le résultat du tirage, l'app doit pouvoir envoyer des SMS. " +
-                        "Autorise « SMS » dans les réglages de l'app, puis réessaie.",
+                    "Pour envoyer à chacun le résultat du tirage, l'app doit pouvoir envoyer des SMS.\n\n" +
+                        "Dans les réglages de l'app : Autorisations → SMS → Autoriser.\n\n" +
+                        "Si Android affiche « Paramètre restreint » (Android 13 et plus, app installée hors " +
+                        "du Play Store) : reviens sur la page de l'app, touche ⋮ en haut à droite, " +
+                        "« Autoriser les paramètres restreints », confirme, puis autorise les SMS.",
                 )
             },
             confirmButton = {

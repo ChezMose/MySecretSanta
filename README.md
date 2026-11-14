@@ -31,7 +31,21 @@ Ouvre le fichier `.apk` téléchargé (dans les notifications ou le dossier Tél
 
 Play Protect peut afficher un avertissement, car l'app demande l'autorisation d'envoyer des SMS. Appuie sur **Installer quand même** : c'est indispensable pour que l'app envoie le résultat du tirage à chaque participant.
 
-### Étape 4 — Ouvrir MySecretSanta
+### Étape 4 — Autoriser les paramètres restreints (Android 13 et plus)
+
+Pour protéger contre les applis malveillantes, Android 13 et les versions suivantes bloquent l'autorisation d'envoyer des SMS pour les applis installées hors du Play Store : c'est un **paramètre restreint**. Tant qu'il n'est pas débloqué, l'option SMS est grisée, ou Android affiche « Paramètre restreint » quand tu essaies de l'activer.
+
+Pour le débloquer, une seule fois :
+
+1. Ouvre les **Paramètres** → **Applications** → **MySecretSanta**.
+   Raccourci : appui long sur l'icône de l'app → **ⓘ** (Infos sur l'appli).
+2. Va dans **Autorisations** → **SMS** et essaie de l'autoriser. Android refuse et affiche « Paramètre restreint » : c'est normal, cette tentative fait apparaître l'option de l'étape suivante.
+3. Reviens sur la page de l'app (MySecretSanta), touche **⋮** en haut à droite, puis **Autoriser les paramètres restreints**. Confirme avec ton code, ton schéma ou ton empreinte.
+4. Retourne dans **Autorisations** → **SMS** et choisis **Autoriser**.
+
+Les noms exacts varient un peu selon le fabricant (Samsung, Xiaomi…), mais le menu **⋮** est toujours sur la page de l'app dans les Paramètres. Sur Android 12 et avant, cette étape n'existe pas : l'app demande simplement l'autorisation au premier envoi.
+
+### Étape 5 — Ouvrir MySecretSanta
 
 Retrouve l'app dans la liste de tes applications.
 

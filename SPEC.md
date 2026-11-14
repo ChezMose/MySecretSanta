@@ -119,7 +119,7 @@ L'organisateur participe souvent au tirage. Il ne doit donc pas voir les résult
 - Le tirage est conservé, même une fois l'échange passé. Il sert à renvoyer un SMS, sans l'afficher, et à garder l'historique.
 - Une action « Révéler le tirage » (menu de l'écran Tirage), derrière une double confirmation, affiche « donneur → receveur » pour chacun. L'app enregistre que le tirage a été révélé : il apparaît comme « Révélé » dans les listes.
 
-**Limite connue :** quand une app qui n'est pas l'app SMS par défaut envoie un SMS, Android le copie dans l'historique de l'app SMS du téléphone. Les messages envoyés apparaissent donc dans les conversations de l'organisateur. L'app ne peut pas l'empêcher. Il faut le signaler à l'utilisateur avant l'envoi, avec le conseil de ne pas ouvrir ces conversations, ou de les supprimer.
+**Limite connue :** quand une app qui n'est pas l'app SMS par défaut envoie un SMS, Android le copie dans l'historique de l'app SMS du téléphone. Les messages envoyés apparaissent donc dans les conversations de l'organisateur. L'app ne peut ni l'empêcher, ni les supprimer ensuite : Android réserve l'écriture et la suppression dans l'historique des SMS à l'app SMS par défaut. Devenir temporairement l'app SMS par défaut a été écarté : les SMS reçus pendant ce temps risqueraient d'être perdus. Il faut le signaler à l'utilisateur avant l'envoi, avec le conseil de ne pas ouvrir ces conversations, ou de les supprimer.
 
 ### 5.6 Envoi des SMS
 
@@ -226,7 +226,7 @@ Expo (React Native) a été écarté : `expo-sms` ne fait qu'ouvrir l'app SMS. L
 
 **Signature :** une clé personnelle unique, stockée dans les secrets GitHub et sauvegardée hors du dépôt. Garder toujours la même clé est indispensable : c'est ce qui permet d'installer une nouvelle version par-dessus l'ancienne sans perdre les données.
 
-**Installation :** le [README](README.md) du dépôt explique la procédure pas à pas. C'est la page vers laquelle pointe le QR code de l'écran Partager (§5.8). En résumé : sur le téléphone, ouvrir `https://github.com/ChezMose/MySecretSanta/releases/download/dev/MySecretSanta.apk` et installer le fichier téléchargé. Le téléphone doit autoriser l'installation d'applications de sources inconnues pour le navigateur. Play Protect peut afficher un avertissement à cause de `SEND_SMS` : il suffit de le valider. L'APK est public, comme le dépôt.
+**Installation :** le [README](README.md) du dépôt explique la procédure pas à pas. C'est la page vers laquelle pointe le QR code de l'écran Partager (§5.8). En résumé : sur le téléphone, ouvrir `https://github.com/ChezMose/MySecretSanta/releases/download/dev/MySecretSanta.apk` et installer le fichier téléchargé. Le téléphone doit autoriser l'installation d'applications de sources inconnues pour le navigateur. Play Protect peut afficher un avertissement à cause de `SEND_SMS` : il suffit de le valider. Sur Android 13 et plus, la permission SMS est un « paramètre restreint » pour une app installée hors du Play Store : il faut l'autoriser depuis la page de l'app dans les Paramètres (menu ⋮ → « Autoriser les paramètres restreints »), puis accorder la permission SMS. Le README et la boîte de dialogue de refus de la permission expliquent la procédure. L'APK est public, comme le dépôt.
 
 ## 9. Critères d'acceptation
 
